@@ -36,6 +36,8 @@ check_compose_available() {
 require_setup_scripts() {
   local required_scripts=(
     "${repo_root}/scripts/link-secrets.sh"
+    "${repo_root}/scripts/install-wsl.sh"
+    "${repo_root}/scripts/install-windows-tools.sh"
     "${repo_root}/scripts/install-opencode.sh"
     "${repo_root}/scripts/install-codex-assets.sh"
     "${repo_root}/scripts/run-opencode.sh"
@@ -120,16 +122,17 @@ esac
 
 need_cmd bash
 need_cmd git
-need_cmd docker
 need_cmd curl
 
 repo_root="$(resolve_repo_root)"
 require_setup_scripts
-check_compose_available
 ensure_setup_steps_implemented
 
+"${repo_root}/scripts/install-wsl.sh"
+"${repo_root}/scripts/install-windows-tools.sh"
 "${repo_root}/scripts/link-secrets.sh"
 "${repo_root}/scripts/install-opencode.sh"
 "${repo_root}/scripts/install-codex-assets.sh"
+check_compose_available
 "${repo_root}/scripts/install-omniroute.sh"
 "${repo_root}/scripts/verify-workstation.sh" --slice omniroute

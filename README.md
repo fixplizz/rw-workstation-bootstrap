@@ -20,11 +20,14 @@ By default, `scripts/link-secrets.sh` resolves the active bootstrap checkout fro
 ## Main Entry Points
 
 - `scripts/setup-workstation.sh`
+- `scripts/install-wsl.sh`
+- `scripts/install-windows-tools.sh`
 - `scripts/link-secrets.sh`
 - `scripts/install-omniroute.sh`
 - `scripts/install-opencode.sh`
 - `scripts/install-codex-assets.sh`
 - `scripts/run-opencode.sh`
+- `scripts/smoke-opencode.sh`
 - `scripts/test-omniroute-sandbox.sh`
 - `scripts/setup-workstation.sh --check`
 - `scripts/verify-workstation.sh`
@@ -89,6 +92,13 @@ private secrets repo are loaded without copying keys into public config:
 
 ```bash
 bash scripts/run-opencode.sh
+```
+
+After configuring OmniRoute providers and a local OmniRoute API key in the
+private secrets repo, run the first end-to-end prompt:
+
+```bash
+bash scripts/smoke-opencode.sh
 ```
 
 Important: seeing the entry-point scripts here does not mean setup or verification is complete yet. The current scripts are intentionally scope-limited and should not be treated as proof of a finished workstation bootstrap.

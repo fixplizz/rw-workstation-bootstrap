@@ -7,8 +7,13 @@ This is the intended fresh Windows 11 + WSL Ubuntu bootstrap flow.
 Install these once on the Windows machine:
 
 - WSL Ubuntu
-- Docker Desktop with WSL integration enabled
-- Git
+
+Inside the fresh WSL Ubuntu 24 shell, install the minimum needed to clone:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git curl
+```
 
 ## Clone
 
@@ -46,6 +51,10 @@ bash scripts/setup-workstation.sh
 
 Expected result:
 
+- WSL gets the baseline packages, zsh, Oh My Zsh, useful plugins, and managed
+  dotfiles.
+- Windows gets Git, Docker Desktop, Edge WebView2 Runtime, and OpenCode Desktop
+  through the PowerShell/winget bootstrap where available.
 - OpenCode is installed in WSL.
 - OpenCode config and agent rules are linked into the user config directory.
 - OmniRoute is running in Docker on `http://localhost:20128`.
@@ -64,6 +73,12 @@ bash scripts/run-opencode.sh
 OpenCode defaults to local OmniRoute at `http://localhost:20128/v1`. Configure
 the NVIDIA provider/key in OmniRoute and keep matching local API token values in
 the private secrets repo.
+
+For the first end-to-end question through OmniRoute:
+
+```bash
+bash scripts/smoke-opencode.sh
+```
 
 ## Verify
 
