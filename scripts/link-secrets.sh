@@ -9,7 +9,8 @@ else
   ROOT_DIR="$(cd -P -- "${ROOT_DIR}" && pwd -P)"
 fi
 
-SECRETS_DIR="${RW_SECRETS_DIR:-/home/fixplizz/projects/rw-omniroute/rw-workstation-secrets}"
+DEFAULT_SECRETS_DIR="$(cd "${ROOT_DIR}/.." && pwd -P)/rw-workstation-secrets"
+SECRETS_DIR="${RW_SECRETS_DIR:-${DEFAULT_SECRETS_DIR}}"
 
 OMNIROUTE_SOURCE="${SECRETS_DIR}/env/omniroute/.env"
 OMNIROUTE_TARGET="${ROOT_DIR}/bootstrap/omniroute/.env.local"

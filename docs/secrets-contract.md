@@ -4,8 +4,8 @@
 
 ## Default Paths
 
-- Bootstrap root defaults to `/home/fixplizz/projects/rw-omniroute/rw-workstation-bootstrap`.
-- Secrets repo defaults to `$RW_SECRETS_DIR` when set, otherwise `/home/fixplizz/projects/rw-omniroute/rw-workstation-secrets`.
+- Bootstrap root defaults to the active `rw-workstation-bootstrap` checkout.
+- Secrets repo defaults to `$RW_SECRETS_DIR` when set, otherwise the sibling `rw-workstation-secrets` checkout next to `rw-workstation-bootstrap`.
 
 ## Required Source Files
 

@@ -13,7 +13,7 @@ Scaffold for workstation bootstrap assets used by the Omniroute companion setup.
 
 This repository is meant to work alongside `rw-workstation-secrets`, which holds the companion secret material and operator-specific local state.
 
-`scripts/link-secrets.sh` reads secrets from `RW_SECRETS_DIR` when that variable is set. Otherwise it uses the default companion checkout at `/home/fixplizz/projects/rw-omniroute/rw-workstation-secrets`. The current path contract is documented in `docs/secrets-contract.md`.
+`scripts/link-secrets.sh` reads secrets from `RW_SECRETS_DIR` when that variable is set. Otherwise it uses the default companion checkout `../rw-workstation-secrets` next to this repository. The current path contract is documented in `docs/secrets-contract.md`.
 
 By default, `scripts/link-secrets.sh` resolves the active bootstrap checkout from its own location. Set `ROOT_DIR` only if you need to point it at a different bootstrap checkout.
 

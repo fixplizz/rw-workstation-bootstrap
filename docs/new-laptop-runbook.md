@@ -23,8 +23,8 @@ parent directory:
 ```bash
 mkdir -p ~/projects/rw-omniroute
 cd ~/projects/rw-omniroute
-git clone git@github.com:<owner>/rw-workstation-bootstrap.git
-git clone git@github.com:<owner>/rw-workstation-secrets.git
+git clone git@github.com:fixplizz/rw-workstation-bootstrap.git
+git clone git@github.com:fixplizz/rw-workstation-secrets.git
 ```
 
 ## Secrets
