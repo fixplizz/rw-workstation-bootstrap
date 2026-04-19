@@ -1,0 +1,19 @@
+services:
+  omniroute:
+    image: ${OMNIROUTE_IMAGE}
+    container_name: ${OMNIROUTE_CONTAINER_NAME:-rw-omniroute}
+    restart: unless-stopped
+    env_file:
+      - ${OMNIROUTE_ENV_FILE:-.env.local}
+    ports:
+      - 127.0.0.1:${HOST_PORT}:${PORT}
+    volumes:
+      - type: volume
+        source: omniroute-data
+        target: /app/data
+        volume:
+          nocopy: true
+
+volumes:
+  omniroute-data:
+    name: ${OMNIROUTE_VOLUME_NAME:-rw-omniroute-data-live}

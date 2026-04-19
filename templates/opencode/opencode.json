@@ -1,0 +1,75 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "server": {
+    "hostname": "127.0.0.1",
+    "port": 4096,
+    "mdns": false
+  },
+  "share": "disabled",
+  "permission": {
+    "edit": "ask",
+    "bash": {
+      "*": "ask",
+      "rm -rf *": "deny",
+      "sudo *": "deny",
+      "dd *": "deny",
+      "mkfs*": "deny",
+      "shutdown *": "deny",
+      "reboot *": "deny"
+    }
+  },
+  "provider": {
+    "omniroute": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "OmniRoute Local",
+      "options": {
+        "baseURL": "http://localhost:20128/v1",
+        "apiKey": "{env:OMNIROUTE_API_KEY}"
+      },
+      "models": {
+        "qwen/qwen3-coder-480b-a35b-instruct": {
+          "name": "Qwen3 Coder 480B A35B Instruct via OmniRoute"
+        },
+        "moonshotai/kimi-k2-thinking": {
+          "name": "Kimi K2 Thinking via OmniRoute"
+        },
+        "z-ai/glm-4.7": {
+          "name": "GLM 4.7 via OmniRoute"
+        },
+        "mistralai/mistral-nemotron": {
+          "name": "Mistral Nemotron via OmniRoute"
+        },
+        "google/gemma-3-27b-it": {
+          "name": "Gemma 3 27B IT via OmniRoute"
+        }
+      }
+    },
+    "nvidia-build": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NVIDIA Build (OpenAI-compatible)",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "apiKey": "{env:NVIDIA_API_KEY}"
+      },
+      "models": {
+        "qwen/qwen3-coder-480b-a35b-instruct": {
+          "name": "Qwen3 Coder 480B A35B Instruct"
+        },
+        "moonshotai/kimi-k2-thinking": {
+          "name": "Kimi K2 Thinking"
+        },
+        "z-ai/glm-4.7": {
+          "name": "GLM 4.7"
+        },
+        "mistralai/mistral-nemotron": {
+          "name": "Mistral Nemotron"
+        },
+        "google/gemma-3-27b-it": {
+          "name": "Gemma 3 27B IT"
+        }
+      }
+    }
+  },
+  "model": "omniroute/qwen/qwen3-coder-480b-a35b-instruct",
+  "small_model": "omniroute/google/gemma-3-27b-it"
+}
