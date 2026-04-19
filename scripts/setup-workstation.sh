@@ -36,6 +36,7 @@ check_compose_available() {
 require_setup_scripts() {
   local required_scripts=(
     "${repo_root}/scripts/link-secrets.sh"
+    "${repo_root}/scripts/unlock-secrets.sh"
     "${repo_root}/scripts/install-wsl.sh"
     "${repo_root}/scripts/install-windows-tools.sh"
     "${repo_root}/scripts/install-opencode.sh"
@@ -130,6 +131,7 @@ ensure_setup_steps_implemented
 
 "${repo_root}/scripts/install-wsl.sh"
 "${repo_root}/scripts/install-windows-tools.sh"
+"${repo_root}/scripts/unlock-secrets.sh"
 "${repo_root}/scripts/link-secrets.sh"
 "${repo_root}/scripts/install-opencode.sh"
 "${repo_root}/scripts/install-codex-assets.sh"

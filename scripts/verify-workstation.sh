@@ -193,6 +193,7 @@ verify_scaffold_only() {
     ".gitignore"
     "scripts/setup-workstation.sh"
     "scripts/link-secrets.sh"
+    "scripts/unlock-secrets.sh"
     "scripts/install-wsl.sh"
     "scripts/install-windows-tools.sh"
     "scripts/install-omniroute.sh"
@@ -223,6 +224,7 @@ verify_scaffold_only() {
   local executable_scripts=(
     "scripts/setup-workstation.sh"
     "scripts/link-secrets.sh"
+    "scripts/unlock-secrets.sh"
     "scripts/install-wsl.sh"
     "scripts/install-windows-tools.sh"
     "scripts/install-omniroute.sh"

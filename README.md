@@ -20,6 +20,7 @@ By default, `scripts/link-secrets.sh` resolves the active bootstrap checkout fro
 ## Main Entry Points
 
 - `scripts/setup-workstation.sh`
+- `scripts/unlock-secrets.sh`
 - `scripts/install-wsl.sh`
 - `scripts/install-windows-tools.sh`
 - `scripts/link-secrets.sh`

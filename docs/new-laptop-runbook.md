@@ -29,7 +29,16 @@ git clone git@github.com:fixplizz/rw-workstation-secrets.git
 
 ## Secrets
 
-Create real ignored env files from the examples in the private repo:
+Preferred path: unlock the encrypted vault from the private repo. The password is
+entered locally and is not stored in git:
+
+```bash
+cd ~/projects/rw-omniroute/rw-workstation-secrets
+bash scripts/vault-unlock.sh
+```
+
+Fallback path: create real ignored env files from the examples in the private
+repo:
 
 ```bash
 cd ~/projects/rw-omniroute/rw-workstation-secrets
@@ -39,6 +48,17 @@ chmod 600 env/omniroute/.env env/providers/nvidia.env
 ```
 
 Then fill in your private values locally. Do not commit real keys.
+
+After editing ignored env files on your main machine, refresh the encrypted
+vault:
+
+```bash
+cd ~/projects/rw-omniroute/rw-workstation-secrets
+bash scripts/vault-seal.sh
+git add vault/workstation-secrets.tar.gz.enc vault/workstation-secrets.manifest
+git commit -m "Update encrypted workstation vault"
+git push
+```
 
 ## Bootstrap
 
