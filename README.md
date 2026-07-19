@@ -1,9 +1,9 @@
-# Fixplizz Workstation v0.1.0-rc1
+# Fixplizz Workstation v0.1.0-rc2
 
 Fixplizz Workstation provisions an opinionated developer workstation on Ubuntu 26.04 LTS amd64. The release candidate installs the public `mvp` profile with one command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc1/boot.sh | bash -s -- --noninteractive
+curl -fsSL https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc2/boot.sh | bash -s -- --profile mvp --noninteractive
 ```
 
 Review [`boot.sh`](boot.sh) before running it. This command installs packages and user applications, changes guarded GNOME settings, and may add the current user to the `docker` group. It does not remove Snap, run a distribution upgrade, enable an SSH server, alter AppArmor, create credentials, log into applications, or load private Fixplizz configuration.
@@ -36,7 +36,7 @@ Authentication for Codex, OpenCode, NetBird, RustDesk and Termix is deliberately
 
 Automated CI covers lint, unit tests, headless integration and the public/private secrets boundary. See [the native smoke procedure](docs/native-smoke-test.md) and [report template](docs/native-smoke-report-template.md).
 
-`v0.1.0 remains blocked` until a real native Ubuntu 26.04 Desktop amd64 smoke report passes. The `v0.1.0-rc1` tag is a prerelease, not stable acceptance.
+`v0.1.0 remains blocked` until a real native Ubuntu 26.04 Desktop amd64 smoke report passes. The `v0.1.0-rc2` tag is a prerelease, not stable acceptance. The immutable `v0.1.0-rc1` tag remains available as the previous candidate.
 
 ## Development and attribution
 

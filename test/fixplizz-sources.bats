@@ -99,6 +99,39 @@ setup() {
   [ -x "$FIXPLIZZ_BIN_HOME/demo" ]
 }
 
+@test "compatible verified artifact is not downloaded or replaced twice" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf '#!/bin/sh\necho demo\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  first_mtime="$(stat -c %Y "$FIXPLIZZ_BIN_HOME/demo")"
+  rm "$fixture"
+  sleep 1
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  [ "$(stat -c %Y "$FIXPLIZZ_BIN_HOME/demo")" = "$first_mtime" ]
+}
+
+@test "compatible pinned Codex CLI is not installed twice" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  npm_log="$BATS_TEST_TMPDIR/npm.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/codex" <<'SH'
+#!/bin/sh
+echo 'codex-cli 0.144.6'
+SH
+  cat >"$fake_bin/npm" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+SH
+  chmod +x "$fake_bin/codex" "$fake_bin/npm"
+
+  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  [ ! -e "$npm_log" ]
+}
+
 @test "MVP modules keep credential and system safety boundaries" {
   run grep -RInE 'sudo[[:space:]]+npm|apt-key|flatpak[[:space:]]+install[[:space:]]+(--system[[:space:]]+)?[^-]|systemctl[[:space:]]+enable[[:space:]]+ssh|apparmor.*(disable|stop)|rustdesk.*password|netbird[[:space:]]+up' "$ROOT/modules" "$ROOT/install/helpers"
   [ "$status" -eq 1 ]

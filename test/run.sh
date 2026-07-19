@@ -78,9 +78,11 @@ MVP_TEXT_FILES=(
   "${MVP_SHELL_FILES[@]}"
   profiles/mvp
   config/sources.rc
+  config/release-artifacts.rc
   test/fixplizz-mvp.bats
   test/fixplizz-boot.bats
   test/fixplizz-json.bats
+  test/fixplizz-native-smoke.bats
   test/fixplizz-policy.bats
   test/fixplizz-sources.bats
   docs/native-smoke-test.md

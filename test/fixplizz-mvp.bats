@@ -90,11 +90,12 @@ PY
   run env FIXPLIZZ_TEST_MODE=1 "$CLI" install --profile mvp --noninteractive
   [ "$status" -eq 0 ]
   run_id="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
-  python - "$FIXPLIZZ_STATE_HOME/runs/$run_id/modules/core.json" <<'PY'
+  python - "$FIXPLIZZ_STATE_HOME/runs/$run_id/modules/core.json" "$ROOT/version" <<'PY'
 import json, pathlib, sys
 data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+expected_version = pathlib.Path(sys.argv[2]).read_text().strip()
 assert data["status"] == "completed"
-assert data["installed_version"] == "0.1.0-rc1"
+assert data["installed_version"] == expected_version
 assert data["source"] == "profile:core"
 PY
 }
