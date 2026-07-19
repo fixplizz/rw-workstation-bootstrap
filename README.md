@@ -3,10 +3,16 @@
 Fixplizz Workstation provisions an opinionated developer workstation on Ubuntu 26.04 LTS amd64. The release candidate installs the public `mvp` profile with one command:
 
 ```bash
-bash -c 'set -o pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc4/boot.sh | bash'
+bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'
 ```
 
 No repository clone, separate `boot.sh` download, manual checksum verification, profile selection or smoke-test command is required. The release defaults to the public `mvp` profile and noninteractive installation. This command installs packages and user applications, changes guarded GNOME settings, and may add the current user to the `docker` group. It does not remove Snap, run a distribution upgrade, enable an SSH server, alter AppArmor, create credentials, log into applications, or load private Fixplizz configuration.
+
+Technical fallback through the immutable GitHub Raw release artifact:
+
+```bash
+bash -c 'set -o pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc4/boot.sh | bash'
+```
 
 ## Supported system
 
@@ -36,6 +42,6 @@ Automated CI covers lint, unit tests, headless integration and the public/privat
 
 Native acceptance is a maintainer workflow documented separately in [the native smoke procedure](docs/native-smoke-test.md) and [report template](docs/native-smoke-report-template.md); ordinary users do not run it.
 
-A short branded endpoint such as `wget -qO- https://<fixplizz-domain>/install | bash` is planned after a Fixplizz domain is available. The domain is not required for the current GitHub-based pilot.
+The public installation endpoint is served from GitHub Pages. After this branch is merged, the Pages source must be changed from `mvp/one-command-workstation /docs` to `main /docs` in repository settings.
 
 See [development](docs/development.md), [architecture](docs/architecture.md), [upstream attribution](docs/upstream.md), [NOTICE](NOTICE.md), [third-party notices](THIRD_PARTY_NOTICES.md), and [LICENSE](LICENSE).

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fixplizz Workstation</title>
+  <style>
+    body { max-width: 52rem; margin: 4rem auto; padding: 0 1.25rem; font: 18px/1.6 system-ui, sans-serif; color: #172033; }
+    code { font-family: ui-monospace, monospace; }
+    pre { overflow-x: auto; padding: 1rem; border-radius: .5rem; background: #f2f4f8; }
+    .status { color: #715500; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Fixplizz Workstation</h1>
+    <p class="status">Status: release candidate</p>
+    <p>Supported system: Ubuntu 26.04 Desktop amd64.</p>
+    <p>Install the current release candidate with one command:</p>
+    <pre><code>bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'</code></pre>
+    <p><strong>Warning:</strong> the script installs system packages and applications and changes guarded workstation settings.</p>
+    <p>If installation is interrupted, continue with:</p>
+    <pre><code>fixplizz resume</code></pre>
+    <p><a href="https://github.com/fixplizz/rw-workstation-bootstrap">View the public GitHub repository</a>.</p>
+  </main>
+</body>
+</html>

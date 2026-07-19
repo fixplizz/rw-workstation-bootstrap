@@ -19,6 +19,11 @@ jobs:
           GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
           echo "$HOME/.local/bin" >>"$GITHUB_PATH"
       - run: FIXPLIZZ_LINT_ONLY=1 bash test/run.sh
+      - name: Validate GitHub Pages bootstrap
+        run: |
+          cmp --silent boot.sh docs/install
+          bash -n docs/install
+          shellcheck docs/install
       - run: scripts/ci/policy-scan.sh
 
   unit:
