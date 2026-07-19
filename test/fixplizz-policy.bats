@@ -9,6 +9,12 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
   [ "$(grep -c 'runs-on: ubuntu-26.04' "$ROOT/.github/workflows/ci.yml")" -eq 4 ]
 }
 
+@test "CI uses the repository lint contract and pinned shfmt" {
+  grep -Fq 'mvdan.cc/sh/v3/cmd/shfmt@v3.13.1' "$ROOT/.github/workflows/ci.yml"
+  grep -Fq 'FIXPLIZZ_LINT_ONLY=1 bash test/run.sh' "$ROOT/.github/workflows/ci.yml"
+  ! grep -Fq 'install/helpers/*.sh' "$ROOT/.github/workflows/ci.yml"
+}
+
 @test "policy and native smoke scripts are executable" {
   for script in scripts/ci/policy-scan.sh scripts/ci/secrets-boundary.sh scripts/smoke/native-ubuntu-26.04.sh; do
     [ -x "$ROOT/$script" ]

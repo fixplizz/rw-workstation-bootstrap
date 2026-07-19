@@ -168,6 +168,11 @@ else
   printf '== shfmt skipped: not installed ==\n'
 fi
 
+if [[ ${FIXPLIZZ_LINT_ONLY:-0} == 1 ]]; then
+  printf 'Lint validation complete.\n'
+  exit 0
+fi
+
 printf '== bats ==\n'
 bats test/*.bats
 

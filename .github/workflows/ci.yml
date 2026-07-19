@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, stable, migration/import-pr1-baseline, mvp/one-command-workstation]
+    branches: [main, develop, stable, migration/import-pr1-baseline]
   pull_request:
 
 permissions:
@@ -13,16 +13,23 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck shfmt python3
-      - run: shellcheck boot.sh install.sh bin/fixplizz* install/helpers/*.sh modules/*.sh scripts/ci/*.sh scripts/smoke/*.sh test/run.sh
-      - run: shfmt -d -i 2 -ci boot.sh install.sh bin/fixplizz* install/helpers/*.sh modules/*.sh scripts/ci/*.sh scripts/smoke/*.sh test/run.sh
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck golang-go python3
+      - name: Install pinned shfmt
+        run: |
+          GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
+          echo "$HOME/.local/bin" >>"$GITHUB_PATH"
+      - run: FIXPLIZZ_LINT_ONLY=1 bash test/run.sh
       - run: scripts/ci/policy-scan.sh
 
   unit:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt python3
+      - run: sudo apt-get update && sudo apt-get install -y bats shellcheck golang-go python3
+      - name: Install pinned shfmt
+        run: |
+          GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
+          echo "$HOME/.local/bin" >>"$GITHUB_PATH"
       - run: bash test/run.sh
 
   integration-headless:
