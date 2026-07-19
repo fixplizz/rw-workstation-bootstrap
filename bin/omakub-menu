@@ -1,0 +1,715 @@
+#!/bin/bash
+
+# omakub:summary=Launch the Omabuntu Menu or takes a parameter to jump straight to a submenu.
+
+export PATH="$HOME/.local/share/omakub/bin:$PATH"
+
+# Set to true when going directly to a submenu, so we can exit directly
+BACK_TO_EXIT=false
+
+back_to() {
+  local parent_menu="$1"
+
+  if [[ $BACK_TO_EXIT == "true" ]]; then
+    exit 0
+  elif [[ -n $parent_menu ]]; then
+    "$parent_menu"
+  else
+    show_main_menu
+  fi
+}
+
+toggle_existing_menu() {
+  if pgrep -f "walker.*--dmenu" >/dev/null; then
+    walker --close >/dev/null 2>&1
+    exit 0
+  fi
+}
+
+menu() {
+  local prompt="$1"
+  local options="$2"
+  local extra="$3"
+  local preselect="$4"
+
+  read -r -a args <<<"$extra"
+
+  if [[ -n $preselect ]]; then
+    local index
+    index=$(echo -e "$options" | grep -nxF "$preselect" | cut -d: -f1)
+    if [[ -n $index ]]; then
+      args+=("-c" "$index")
+    fi
+  fi
+
+  echo -e "$options" | omakub-launch-walker --dmenu --width 295 --minheight 1 --maxheight 630 -p "$prompt…" "${args[@]}" 2>/dev/null
+}
+
+terminal() {
+  xdg-terminal-exec "$@"
+}
+
+present_terminal() {
+  omakub-launch-terminal-with-presentation "$@"
+}
+
+open_in_editor() {
+  omakub-notification-send -g "󰂮" -u low "Editing config file" "$1"
+  omakub-launch-editor "$1"
+}
+
+install() {
+  present_terminal "echo 'Installing $1...'; omakub-pkg-add $2"
+}
+
+install_font() {
+  present_terminal "echo 'Installing $1...'; omakub-install-font $2 && sleep 2 && omakub-font-set '$3'"
+}
+
+install_terminal() {
+  present_terminal "omakub-install-terminal $1"
+}
+
+remove() {
+  present_terminal "echo 'Removing $1...'; omakub-pkg-drop $2"
+}
+
+remove_font() {
+  present_terminal "echo 'Removing $1...'; omakub-remove-font $2"
+}
+
+show_learn_menu() {
+  case $(menu "Learn" "  Keybindings\n  Tmux keybindings\n  Omabuntu\n  Ubuntu\n󰊬  GNOME\n  Neovim\n󱆃  Bash") in
+  *Keybindings*) omakub-launch-webapp "https://omabuntu.omakasui.org/manual/essentials/hotkeys" "Omabuntu Keybindings" ;;
+  *Tmux*) omakub-menu-tmux-keybindings ;;
+  *Omabuntu*) omakub-launch-webapp "https://omabuntu.omakasui.org/manual" "Omabuntu" ;;
+  *Ubuntu*) omakub-launch-webapp "https://help.ubuntu.com/" "Ubuntu" ;;
+  *GNOME*) omakub-launch-webapp "https://help.gnome.org/" "GNOME" ;;
+  *Bash*) omakub-launch-webapp "https://devhints.io/bash" "Bash" ;;
+  *Neovim*) omakub-launch-webapp "https://www.lazyvim.org/keymaps" "Neovim" ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_trigger_menu() {
+  case $(menu "Trigger" "󰔛  Reminder\n󰧸  Transcode\n  Share\n󰔎  Toggle") in
+  *Reminder*) show_reminder_menu ;;
+  *Transcode*) omakub-transcode || back_to show_trigger_menu ;;
+  *Share*) show_share_menu ;;
+  *Toggle*) show_toggle_menu ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_reminder_menu() {
+  case $(menu "Reminder" "󰔛  Set one\n󰔛  Show all\n󰔛  Clear all") in
+  *Set*) show_custom_reminder_input ;;
+  *"Show all"*) omakub-reminder show ;;
+  *"Clear all"*) omakub-reminder clear ;;
+  *) back_to show_trigger_menu ;;
+  esac
+}
+
+show_custom_reminder_input() {
+  local minutes
+  minutes=$(omakub-menu-input "Remind in minutes")
+
+  if [[ $minutes =~ ^[0-9]+$ ]] && ((minutes > 0)); then
+    show_reminder_message_input "$minutes"
+  elif [[ -n $minutes ]]; then
+    omakub-notification-send -g "󰔛" "Invalid reminder" "Enter the number of minutes" -u critical
+    show_custom_reminder_input
+  else
+    back_to show_reminder_menu
+  fi
+}
+
+show_reminder_message_input() {
+  local minutes="$1"
+  local message
+  message=$(omakub-menu-input "Reminder message")
+
+  if [[ -n $message ]]; then
+    omakub-reminder "$minutes" "$message"
+  else
+    omakub-reminder "$minutes"
+  fi
+}
+
+show_share_menu() {
+  case $(menu "Share" "  Clipboard\n  File \n  Folder\n󰥦  Receive") in
+  *Receive*) localsend_app ;;
+  *Clipboard*) omakub-menu-share clipboard ;;
+  *File*) terminal bash -c "omakub-menu-share file" ;;
+  *Folder*) terminal bash -c "omakub-menu-share folder" ;;
+  *) back_to show_trigger_menu ;;
+  esac
+}
+
+show_toggle_menu() {
+  case $(menu "Toggle" "󰔎  Nightlight") in
+  *Nightlight*) omakub-toggle-nightlight ;;
+  *) back_to show_trigger_menu ;;
+  esac
+}
+
+show_style_menu() {
+  case $(menu "Style" "󰸌  Theme\n󱣴  Plymouth\n  Font\n  Background\n  About") in
+  *Theme*) show_theme_menu ;;
+  *Plymouth*) omakub-launch-walker -m menus:omakubunlocks --width 800 --minheight 400 ;;
+  *Font*) show_font_menu ;;
+  *Background*) show_background_menu ;;
+  *About*) show_about_menu ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_theme_menu() {
+  omakub-launch-walker -m menus:omakubthemes --width 800 --minheight 400
+}
+
+show_font_menu() {
+  case $(menu "Font" "  Family\n󰧴  Size") in
+  *Family*) show_font_family_menu ;;
+  *Size*) present_terminal omakub-font-size-set ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_font_family_menu() {
+  font=$(menu "Font" "$(omakub-font-list)" "--width 350" "$(omakub-font-current)")
+  if [[ $font == "CNCLD" || -z $font ]]; then
+    back_to show_style_menu
+  else
+    omakub-font-set "$font"
+  fi
+}
+
+show_background_menu() {
+  omakub-launch-walker -m menus:omakubBackgroundSelector --width 800 --minheight 400
+}
+
+show_about_menu() {
+  case $(menu "About" "  Edit Text\n  Set From Image\n  Restore Default") in
+  *Text*) omakub-branding-about text ;;
+  *Image*) omakub-branding-about image ;;
+  *Default*) omakub-branding-about reset ;;
+  *) show_style_menu ;;
+  esac
+}
+
+show_setup_menu() {
+  case $(menu "Setup" "󰤆  System Sleep\n  Folders\n  Keybindings\n󰓎  Defaults\n󰱔  DNS\n  Config") in
+  *System*) show_setup_system_menu ;;
+  *Folders*) show_setup_folders_menu ;;
+  *Keybindings*) show_setup_keybindings_menu ;;
+  *Defaults*) show_setup_default_menu ;;
+  *DNS*) present_terminal omakub-setup-dns ;;
+  *Config*) show_setup_config_menu ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_setup_system_menu() {
+  local options=""
+
+ if omakub-toggle-enable suspend-off; then
+    options="$options󰒲  Enable Suspend"
+  else
+    options="$options󰒲  Disable Suspend"
+  fi
+
+  case $(menu "System" "$options") in
+  *Suspend*) omakub-toggle-suspend ;;
+  *) show_setup_menu ;;
+  esac
+}
+
+show_setup_folders_menu() {
+  case $(menu "Folders" "󰮝  Add\n󰮞  Remove") in
+  *Add*) present_terminal omakub-gnome-grid-folder-add ;;
+  *Remove*) present_terminal omakub-gnome-grid-folder-drop ;;
+  *) show_setup_menu ;;
+  esac
+}
+
+show_setup_keybindings_menu() {
+  case $(menu "Keybindings" "   Add\n   Remove") in
+  *Add*) present_terminal omakub-gnome-keybinding-add ;;
+  *Remove*) present_terminal omakub-gnome-keybinding-drop ;;
+  *) show_setup_menu ;;
+  esac
+}
+
+show_setup_default_menu() {
+  case $(menu "Default" "  Browser\n  Terminal\n  Editor") in
+  *Browser*) show_setup_default_browser_menu ;;
+  *Terminal*) show_setup_default_terminal_menu ;;
+  *Editor*) show_setup_default_editor_menu ;;
+  *) show_setup_menu ;;
+  esac
+}
+
+browser_desktop_exists() {
+  [[ -f ~/.local/share/applications/$1 || -f ~/.nix-profile/share/applications/$1 || -f /usr/share/applications/$1 ]]
+}
+
+show_setup_default_browser_menu() {
+  local options=""
+  browser_desktop_exists chromium.desktop && options="$options  Chromium"
+  browser_desktop_exists google-chrome.desktop && options="${options:+$options\n}󰊯  Chrome"
+  browser_desktop_exists brave-browser.desktop && options="${options:+$options\n}󰖟  Brave"
+  browser_desktop_exists microsoft-edge.desktop && options="${options:+$options\n}󰇩  Edge"
+  browser_desktop_exists firefox.desktop && options="${options:+$options\n}󰈹  Firefox"
+  browser_desktop_exists zen.desktop && options="${options:+$options\n}󰖟  Zen"
+
+  local current=""
+  case "$(omakub-default-browser)" in
+  chromium) current="  Chromium" ;;
+  chrome) current="󰊯  Chrome" ;;
+  brave) current="󰖟  Brave" ;;
+  edge) current="󰇩  Edge" ;;
+  firefox) current="󰈹  Firefox" ;;
+  zen) current="󰖟  Zen" ;;
+  esac
+
+  case $(menu "Default Browser" "$options" "" "$current") in
+  *Chromium*) omakub-default-browser chromium ;;
+  *Chrome*) omakub-default-browser chrome ;;
+  *Brave*) omakub-default-browser brave ;;
+  *Edge*) omakub-default-browser edge ;;
+  *Firefox*) omakub-default-browser firefox ;;
+  *Zen*) omakub-default-browser zen ;;
+  *) show_setup_default_menu ;;
+  esac
+}
+
+show_setup_default_terminal_menu() {
+  local options=""
+  omakub-cmd-present alacritty && options="$options  Alacritty"
+  omakub-cmd-present ghostty && options="${options:+$options\n}  Ghostty"
+  omakub-cmd-present kitty && options="${options:+$options\n}  Kitty"
+
+  local current=""
+  case "$(omakub-default-terminal)" in
+  alacritty) current="  Alacritty" ;;
+  ghostty) current="  Ghostty" ;;
+  kitty) current="  Kitty" ;;
+  esac
+
+  case $(menu "Default Terminal" "$options" "" "$current") in
+  *Alacritty*) omakub-default-terminal alacritty ;;
+  *Ghostty*) omakub-default-terminal ghostty ;;
+  *Kitty*) omakub-default-terminal kitty ;;
+  *) show_setup_default_menu ;;
+  esac
+}
+
+show_setup_default_editor_menu() {
+  local options=""
+  omakub-cmd-present nvim && options="$options  Neovim"
+  omakub-cmd-present code && options="${options:+$options\n}  VSCode"
+  omakub-cmd-present cursor && options="${options:+$options\n}  Cursor"
+  omakub-cmd-present zeditor && options="${options:+$options\n}  Zed"
+  omakub-cmd-present vim && options="${options:+$options\n}  Vim"
+  omakub-cmd-present emacs && options="${options:+$options\n}  Emacs"
+
+  local current=""
+  case "$(omakub-default-editor)" in
+  nvim) current="  Neovim" ;;
+  code) current="  VSCode" ;;
+  cursor) current="  Cursor" ;;
+  zed | zeditor) current="  Zed" ;;
+  vim) current="  Vim" ;;
+  emacs) current="  Emacs" ;;
+  esac
+
+  case $(menu "Default Editor" "$options" "" "$current") in
+  *Neovim*) omakub-default-editor nvim ;;
+  *VSCode*) omakub-default-editor code ;;
+  *Cursor*) omakub-default-editor cursor ;;
+  *Zed*) omakub-default-editor zed ;;
+  *Vim*) omakub-default-editor vim ;;
+  *Emacs*) omakub-default-editor emacs ;;
+  *) show_setup_default_menu ;;
+  esac
+}
+
+show_setup_config_menu() {
+  case $(menu "Setup" "󰌧  Walker\n󰞅  XCompose") in
+  *Walker*) open_in_editor ~/.config/walker/config.toml && omakub-restart-walker ;;
+  *XCompose*) open_in_editor ~/.XCompose && omakub-restart-xcompose ;;
+  *) show_setup_menu ;;
+  esac
+}
+
+show_install_menu() {
+  case $(menu "Install" "  Package\n  Web App\n  TUI\n  Service\n  Browser\n  Utility\n  Style\n󰵮  Development\n  Editor\n  Terminal\n󱚤  AI\n  Gaming") in
+  *Package*) terminal omakub-pkg-install ;;
+  *Web*) present_terminal omakub-webapp-install ;;
+  *TUI*) present_terminal omakub-tui-install ;;
+  *Service*) show_install_service_menu ;;
+  *Browser*) show_install_browser_menu ;;
+  *Utility*) show_install_utility_menu ;;
+  *Style*) show_install_style_menu ;;
+  *Development*) show_install_development_menu ;;
+  *Editor*) show_install_editor_menu ;;
+  *Terminal*) show_install_terminal_menu ;;
+  *AI*) show_install_ai_menu ;;
+  *Gaming*) show_install_gaming_menu ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_install_service_menu() {
+  case $(menu "Install" "  1password\n  Bitwarden\n  Discord\n  Dropbox\n  LibreOffice\n  LocalSend\n  ObsStudio\n  Obsidian\n  Signal\n  Spotify\n  Typora\n  Tailscale") in
+  *1password*) present_terminal omakub-install-1password ;;
+  *Bitwarden*) install "Bitwarden" "bitwarden" ;;
+  *Discord*) present_terminal omakub-install-discord ;;
+  *Dropbox*) install "Dropbox" "nautilus-dropbox" ;;
+  *LibreOffice*) install "LibreOffice" "libreoffice" ;;
+  *LocalSend*) install "LocalSend" "localsend" ;;
+  *ObsStudio*) install "ObsStudio" "obs-studio" ;;
+  *Obsidian*) install "Obsidian" "obsidian" ;;
+  *Signal*) present_terminal omakub-install-signal ;;
+  *Spotify*) present_terminal omakub-install-spotify ;;
+  *Typora*) present_terminal omakub-install-typora ;;
+  *Tailscale*) present_terminal omakub-install-tailscale ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_browser_menu() {
+  case $(menu "Install" "  Chrome\n  Edge\n  Brave\n  Firefox\n󰖟  Zen") in
+  *Chrome*) present_terminal "omakub-install-browser chrome" ;;
+  *Edge*) present_terminal "omakub-install-browser edge" ;;
+  *Brave*) present_terminal "omakub-install-browser brave" ;;
+  *Firefox*) present_terminal "omakub-install-browser firefox" ;;
+  *Zen*) present_terminal "omakub-install-browser zen" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_utility_menu() {
+  case $(menu "Install" "  Flameshot\n  Pinta\n  Starship\n  Xournalpp") in
+  *Flameshot*) install "Flameshot" "flameshot" ;;
+  *Pinta*) install "Pinta" "pinta" ;;
+  *Starship*) install "Starship" "starship" ;;
+  *Xournalpp*) install "Xournalpp" "xournalpp" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_style_menu() {
+  case $(menu "Install" "󰸌  Theme\n  Background\n  Font") in
+  *Theme*) present_terminal omakub-theme-install ;;
+  *Background*) omakub-theme-bg-install ;;
+  *Font*) show_install_font_menu ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_font_menu() {
+  case $(menu "Install" "  Cascadia Mono\n  JetBrains Mono\n  iA Fonts\n  Microsoft Core Fonts" "--width 350") in
+  *Cascadia*) install_font "Cascadia Mono" "cascadia-mono" "Cascadia Mono Nerd Font" ;;
+  *JetBrains*) install_font "JetBrains Mono" "jetbrains-mono" "JetBrains Mono" ;;
+  *iA*) install_font "iA Fonts" "iafonts" "iA Fonts Nerd Font" ;;
+  *Microsoft*) install_font "Microsoft Core Fonts" "mscore" "Microsoft Core Fonts" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_development_menu() {
+  case $(menu "Install" "󱘲  Databases\n󰫏  Ruby on Rails\n  JavaScript\n  Go\n  PHP\n  Python\n  Elixir\n  Zig\n  Rust\n  Java\n  .NET\n  OCaml\n  Clojure\n  Scala") in
+  *Databases*) show_install_databases_menu ;;
+  *Rails*) present_terminal "omakub-install-dev-env ruby" ;;
+  *JavaScript*) show_install_javascript_menu ;;
+  *Go*) present_terminal "omakub-install-dev-env go" ;;
+  *PHP*) present_terminal "omakub-install-dev-env php" ;;
+  *Python*) present_terminal "omakub-install-dev-env python" ;;
+  *Elixir*) show_install_elixir_menu ;;
+  *Zig*) present_terminal "omakub-install-dev-env zig" ;;
+  *Rust*) present_terminal "omakub-install-dev-env rust" ;;
+  *Java*) present_terminal "omakub-install-dev-env java" ;;
+  *NET*) present_terminal "omakub-install-dev-env dotnet" ;;
+  *OCaml*) present_terminal "omakub-install-dev-env ocaml" ;;
+  *Clojure*) present_terminal "omakub-install-dev-env clojure" ;;
+  *Scala*) present_terminal "omakub-install-dev-env scala" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_databases_menu() {
+  case $(menu "Install Databases" "  MySQL\n  PostgreSQL\n  MariaDB\n  Redis\n  MongoDB\n󱘲  MSSQL") in
+  *MySQL*) present_terminal "omakub-install-docker-dbs mysql" ;;
+  *PostgreSQL*) present_terminal "omakub-install-docker-dbs postgresql" ;;
+  *MariaDB*) present_terminal "omakub-install-docker-dbs mariadb" ;;
+  *Redis*) present_terminal "omakub-install-docker-dbs redis" ;;
+  *MongoDB*) present_terminal "omakub-install-docker-dbs mongodb" ;;
+  *MSSQL*) present_terminal "omakub-install-docker-dbs mssql" ;;
+  *) show_install_development_menu ;;
+  esac
+}
+
+show_install_javascript_menu() {
+  case $(menu "Install" "  Node.js\n  Bun\n  Deno") in
+  *Node*) present_terminal "omakub-install-dev-env node" ;;
+  *Bun*) present_terminal "omakub-install-dev-env bun" ;;
+  *Deno*) present_terminal "omakub-install-dev-env deno" ;;
+  *) show_install_development_menu ;;
+  esac
+}
+
+show_install_elixir_menu() {
+  case $(menu "Install" "  Elixir\n  Phoenix") in
+  *Elixir*) present_terminal "omakub-install-dev-env elixir" ;;
+  *Phoenix*) present_terminal "omakub-install-dev-env phoenix" ;;
+  *) show_install_development_menu ;;
+  esac
+}
+
+show_install_editor_menu() {
+  case $(menu "Install" "  VSCode\n  Cursor\n  Zed\n  Emacs") in
+  *VSCode*) present_terminal omakub-install-vscode ;;
+  *Cursor*) present_terminal "omakub-install-cursor" ;;
+  *Zed*) install "Zed" "zed" ;;
+  *Emacs*) present_terminal "omakub-install-doom-emacs" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_terminal_menu() {
+  case $(menu "Install" "  Alacritty\n  Ghostty\n  Kitty") in
+  *Alacritty*) install_terminal "alacritty" ;;
+  *Ghostty*) install_terminal "ghostty" ;;
+  *Kitty*) install_terminal "kitty" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_ai_menu() {
+  case $(menu "Install" "󱚤  Ollama") in
+  *Ollama*) present_terminal "omakub-install-ollama" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_install_gaming_menu() {
+  case $(menu "Install" "  Steam\n  RetroArch\n󰍳  Minecraft") in
+  *Steam*) present_terminal "omakub-install-gaming-steam" ;;
+  *RetroArch*) present_terminal "omakub-install-gaming-retroarch" ;;
+  *Minecraft*) present_terminal "omakub-install-gaming-minecraft" ;;
+  *) show_install_menu ;;
+  esac
+}
+
+show_remove_menu() {
+  case $(menu "Remove" "  Package\n  Web App\n  TUI\n  Style\n  Browser\n󰵮  Development\n󱚤  AI\n  Gaming\n󰏓  Preinstalls") in
+  *Package*) terminal omakub-pkg-remove ;;
+  *Web*) present_terminal omakub-webapp-remove ;;
+  *TUI*) present_terminal omakub-tui-remove ;;
+  *Style*) show_remove_style_menu ;;
+  *Browser*) show_remove_browser_menu ;;
+  *Development*) show_remove_development_menu ;;
+  *AI*) show_remove_ai_menu ;;
+  *Gaming*) show_remove_gaming_menu ;;
+  *Preinstalls*) present_terminal omakub-remove-preinstalls ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_remove_style_menu() {
+  case $(menu "Remove" "󰸌  Theme\n  Font") in
+  *Theme*) present_terminal omakub-theme-remove ;;
+  *Font*) show_remove_font_menu ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_remove_font_menu() {
+  case $(menu "Remove Font" "  Cascadia Mono\n  JetBrains Mono\n  iA Fonts\n  Microsoft Core Fonts" "--width 350") in
+  *Cascadia*) remove_font "Cascadia Mono" "cascadia-mono" ;;
+  *JetBrains*) remove_font "JetBrains Mono" "jetbrains-mono" ;;
+  *iA*) remove_font "iA Fonts" "iafonts" ;;
+  *Microsoft*) remove_font "Microsoft Core Fonts" "mscore" ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_remove_browser_menu() {
+  case $(menu "Remove" "  Chrome\n  Edge\n  Brave\n  Firefox\n  Zen") in
+  *Chrome*) present_terminal "omakub-remove-browser chrome" ;;
+  *Edge*) present_terminal "omakub-remove-browser edge" ;;
+  *Brave*) present_terminal "omakub-remove-browser brave" ;;
+  *Firefox*) present_terminal "omakub-remove-browser firefox" ;;
+  *Zen*) present_terminal "omakub-remove-browser zen" ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_remove_development_menu() {
+  case $(menu "Remove Development Environment" "󰫏  Ruby on Rails\n  JavaScript\n  Go\n  PHP\n  Python\n  Elixir\n  Zig\n  Rust\n  Java\n  .NET\n  OCaml\n  Clojure\n  Scala") in
+  *Rails*) present_terminal "omakub-remove-dev-env ruby" ;;
+  *JavaScript*) show_remove_javascript_menu ;;
+  *Go*) present_terminal "omakub-remove-dev-env go" ;;
+  *PHP*) present_terminal "omakub-remove-dev-env php" ;;
+  *Python*) present_terminal "omakub-remove-dev-env python" ;;
+  *Elixir*) show_remove_elixir_menu ;;
+  *Zig*) present_terminal "omakub-remove-dev-env zig" ;;
+  *Rust*) present_terminal "omakub-remove-dev-env rust" ;;
+  *Java*) present_terminal "omakub-remove-dev-env java" ;;
+  *NET*) present_terminal "omakub-remove-dev-env dotnet" ;;
+  *OCaml*) present_terminal "omakub-remove-dev-env ocaml" ;;
+  *Clojure*) present_terminal "omakub-remove-dev-env clojure" ;;
+  *Scala*) present_terminal "omakub-remove-dev-env scala" ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_remove_javascript_menu() {
+  case $(menu "Remove JavaScript Environment" "  Node.js\n  Bun\n  Deno") in
+  *Node*) present_terminal "omakub-remove-dev-env node" ;;
+  *Bun*) present_terminal "omakub-remove-dev-env bun" ;;
+  *Deno*) present_terminal "omakub-remove-dev-env deno" ;;
+  *) show_remove_development_menu ;;
+  esac
+}
+
+show_remove_elixir_menu() {
+  case $(menu "Remove Elixir Environment" "  Elixir\n  Phoenix") in
+  *Elixir*) present_terminal "omakub-remove-dev-env elixir" ;;
+  *Phoenix*) present_terminal "omakub-remove-dev-env phoenix" ;;
+  *) show_remove_development_menu ;;
+  esac
+}
+
+show_remove_ai_menu() {
+  case $(menu "Remove AI" "󱚤  Ollama") in
+  *Ollama*) present_terminal "omakub-remove-ollama" ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_remove_gaming_menu() {
+  case $(menu "Remove Gaming" "  Steam\n  RetroArch\n󰍳  Minecraft") in
+  *Steam*) present_terminal "omakub-remove-gaming-steam" ;;
+  *RetroArch*) present_terminal "omakub-remove-gaming-retroarch" ;;
+  *Minecraft*) present_terminal "omakub-remove-gaming-minecraft" ;;
+  *) show_remove_menu ;;
+  esac
+}
+
+show_update_menu() {
+  local brand_name=$(omakub-branding-name)
+
+  case $(menu "Update" "󰟢  $brand_name\n󰔫  Channel\n  Config\n󰸌  Themes\n  Process\n󰇅  Hardware\n  Firmware\n  Password") in
+  *$brand_name*) present_terminal omakub-update ;;
+  *Channel*) show_update_channel_menu ;;
+  *Config*) show_update_config_menu ;;
+  *Themes*) present_terminal omakub-theme-update ;;
+  *Process*) show_update_process_menu ;;
+  *Hardware*) show_update_hardware_menu ;;
+  *Firmware*) present_terminal omakub-update-firmware ;;
+  *Password*) show_update_password_menu ;;
+  *) show_main_menu ;;
+  esac
+}
+
+show_update_channel_menu() {
+  case $(menu "Update channel" "🟢 Stable\n🔴 Dev") in
+  *Stable*) present_terminal "omakub-channel-set stable" ;;
+  *Dev*) present_terminal "omakub-channel-set dev" ;;
+  *) show_update_menu ;;
+  esac
+}
+
+show_update_config_menu() {
+  case $(menu "Use default config" "  Gnome\n󰍂  GDM\n  Keybindings\n󱣴  Plymouth\n  Starship\n  Tmux\n󰌧  Walker") in
+  *Gnome*) present_terminal omakub-refresh-gnome ;;
+  *GDM*) present_terminal omakub-refresh-gdm ;;
+  *Keybindings*) present_terminal omakub-refresh-keybindings ;;
+  *Plymouth*) present_terminal omakub-refresh-plymouth ;;
+  *Starship*) present_terminal omakub-refresh-config starship.toml ;;
+  *Tmux*) present_terminal omakub-refresh-tmux ;;
+  *Walker*) present_terminal omakub-refresh-walker ;;
+  *) show_update_menu ;;
+  esac
+}
+
+show_update_process_menu() {
+  case $(menu "Restart" "󰌧  Walker") in
+  *Walker*) omakub-restart-walker ;;
+  *) show_update_menu ;;
+  esac
+}
+
+show_update_hardware_menu() {
+  case $(menu "Restart" "  Audio") in
+  *Audio*) present_terminal omakub-restart-pipewire ;;
+  *) show_update_menu ;;
+  esac
+}
+
+show_update_password_menu() {
+  case $(menu "Update Password" "  User") in
+  *User*) present_terminal passwd ;;
+  *) show_update_menu ;;
+  esac
+}
+
+show_about() {
+  omakub-launch-about
+}
+
+show_system_menu() {
+  local options="󰌾  Lock"
+  [[ ! -f ~/.local/state/omakub/toggles/suspend-off ]] && options="$options\n󰒲  Suspend"
+  options="$options\n󰌾  Logout\n󰜉  Restart\n󰐥  Shutdown"
+
+  case $(menu "System" "$options") in
+  *Lock*) omakub-system-lock ;;
+  *Suspend*) systemctl suspend ;;
+  *Logout*) omakub-system-logout ;;
+  *Restart*) omakub-system-reboot ;;
+  *Shutdown*) omakub-system-shutdown ;;
+  *) back_to show_main_menu ;;
+  esac
+}
+
+show_main_menu() {
+  go_to_menu "$(menu "Go" "󰀻  Apps\n󰧑  Learn\n󱓞  Trigger\n  Style\n  Setup\n󰉉  Install\n󰭌  Remove\n󰑐  Update\n  About\n󰤆  System")"
+}
+
+go_to_menu() {
+  case "${1,,}" in
+  *apps*) omakub-menu-app ;;
+  *learn*) show_learn_menu ;;
+  *trigger*) show_trigger_menu ;;
+  *toggle*) show_toggle_menu ;;
+  *share*) show_share_menu ;;
+  *reminder-set*) show_custom_reminder_input ;;
+  *reminder*) show_reminder_menu ;;
+  *background*) show_background_menu ;;
+  *style*) show_style_menu ;;
+  *theme*) show_theme_menu ;;
+  *setup*) show_setup_menu ;;
+  *install*) show_install_menu ;;
+  *remove*) show_remove_menu ;;
+  *update*) show_update_menu ;;
+  *about*) show_about ;;
+  *system*) show_system_menu ;;
+  esac
+}
+
+# Allow user extensions and overrides
+USER_EXTENSIONS="$HOME/.config/omakub/extensions/menu.sh"
+[[ -f $USER_EXTENSIONS ]] && source "$USER_EXTENSIONS"
+
+toggle_existing_menu
+
+if [[ -n "$1" ]]; then
+  BACK_TO_EXIT=true
+  go_to_menu "$1"
+else
+  show_main_menu
+fi

@@ -1,0 +1,9 @@
+*.sh text eol=lf
+*.bats text eol=lf
+bin/fixplizz* text eol=lf
+boot.sh text eol=lf
+install.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+version text eol=lf

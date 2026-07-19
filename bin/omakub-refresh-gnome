@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# omakub:summary=Overwrite all GNOME settings (app grid, dock, extensions, keybindings) with Omabuntu defaults.
+
+source ~/.local/share/omakub/install/config/gnome/app-grid.sh
+source ~/.local/share/omakub/install/config/gnome/dock.sh
+source ~/.local/share/omakub/install/config/gnome/extensions.sh
+source ~/.local/share/omakub/install/config/gnome/hotkeys.sh
+source ~/.local/share/omakub/install/config/gnome/settings.sh

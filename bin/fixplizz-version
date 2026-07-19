@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# fixplizz:group=version
+# fixplizz:summary=Show Fixplizz Workstation version
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$ROOT/install/helpers/fixplizz-env.sh"
+
+printf 'Fixplizz Workstation %s\n' "$(fixplizz_version)"

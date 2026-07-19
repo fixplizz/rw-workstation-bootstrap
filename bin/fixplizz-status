@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# fixplizz:group=status
+# fixplizz:summary=Show detected Fixplizz Workstation state
+# fixplizz:args=[--json]
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$ROOT/install/helpers/fixplizz-env.sh"
+# shellcheck source=install/helpers/detection.sh
+source "$ROOT/install/helpers/detection.sh"
+
+json_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '"%s"' "$value"
+}
+
+json=false
+if (($# > 0)); then
+  case "$1" in
+    --json)
+      json=true
+      ;;
+    --help | -h)
+      printf 'Usage: fixplizz status [--json]\n'
+      exit 0
+      ;;
+    *)
+      printf 'Unknown option for fixplizz status: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+fi
+
+version="$(fixplizz_version)"
+release_stage="development"
+os_id="$(fixplizz_detect_os)"
+os_version="$(fixplizz_detect_version)"
+arch="$(fixplizz_detect_arch)"
+desktop="$(fixplizz_detect_desktop)"
+session="$(fixplizz_detect_session)"
+legacy="$(fixplizz_detect_legacy_installation)"
+last_run="none"
+
+if [[ -r "$FIXPLIZZ_STATE_HOME/current-run" ]]; then
+  last_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+fi
+
+if [[ $json == true ]]; then
+  printf '{"ok":true,"command":"status","status":{'
+  printf '"version":%s,' "$(json_string "$version")"
+  printf '"release_stage":%s,' "$(json_string "$release_stage")"
+  printf '"channel":%s,' "$(json_string "$FIXPLIZZ_CHANNEL")"
+  printf '"repository_path":%s,' "$(json_string "$FIXPLIZZ_ROOT")"
+  printf '"os":%s,' "$(json_string "$os_id")"
+  printf '"os_version":%s,' "$(json_string "$os_version")"
+  printf '"architecture":%s,' "$(json_string "$arch")"
+  printf '"desktop":%s,' "$(json_string "$desktop")"
+  printf '"session":%s,' "$(json_string "$session")"
+  printf '"installation_state":%s,' "$(json_string "pr1-cli-only")"
+  printf '"legacy_installation":%s,' "$(json_string "$legacy")"
+  printf '"last_run":%s' "$(json_string "$last_run")"
+  printf '}}\n'
+  exit 0
+fi
+
+cat <<EOF
+Fixplizz Workstation status
+
+Version: $version
+Release stage: $release_stage
+Channel: $FIXPLIZZ_CHANNEL
+Repository path: $FIXPLIZZ_ROOT
+OS: $os_id $os_version
+Architecture: $arch
+Desktop: $desktop
+Session: $session
+Installation state: pr1-cli-only
+Legacy installation: $legacy
+Last run: $last_run
+EOF

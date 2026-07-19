@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# omakub:summary=Set the Omabuntu channel, which dictates what git branch and package repository is used.
+# omakub:args=<stable|dev>
+# omakub:requires-sudo=true
+
+if (($# == 0)); then
+  echo "Usage: omakub-channel-set [stable|dev]"
+  exit 1
+else
+  channel="$1"
+fi
+
+case "$channel" in
+"stable") omakub-branch-set "main" && omakub-refresh-apt "stable" ;;
+"dev") omakub-branch-set "dev" && omakub-refresh-apt "dev" ;;
+*) echo "Unknown channel: $channel"; exit 1; ;;
+esac

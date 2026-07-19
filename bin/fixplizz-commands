@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# fixplizz:group=commands
+# fixplizz:summary=List and validate Fixplizz commands
+# fixplizz:args=[--all] [--json] [--check]
+
+set -Eeuo pipefail
+
+exec "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/fixplizz" commands "$@"

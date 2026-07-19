@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# omakub:summary=Show current monospace font size
+# omakub:examples=omakub font size current
+
+CURRENT_TERMINAL=$(omakub-terminal-current)
+
+if [[ -z $CURRENT_TERMINAL ]]; then
+  echo "No terminal found"
+  exit 1
+fi
+
+case "${CURRENT_TERMINAL,,}" in
+  alacritty)
+    grep -oP 'size\s*=\s*\K[0-9]+' ~/.config/alacritty/alacritty.toml | head -n1
+    ;;
+  kitty)
+    grep -oP '^font_size\s+\K.*' ~/.config/kitty/kitty.conf | head -n1
+    ;;
+  ghostty)
+    grep -oP '^font-size\s*=\s*\K[0-9]+' ~/.config/ghostty/config | head -n1
+    ;;
+  *)
+    echo "Unsupported terminal: $CURRENT_TERMINAL"
+    exit 1
+    ;;
+esac

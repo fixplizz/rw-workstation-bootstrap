@@ -1,0 +1,447 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+FIXPLIZZ_BIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+FIXPLIZZ_ROOT=$(cd -- "$FIXPLIZZ_BIN_DIR/.." && pwd)
+export FIXPLIZZ_ROOT
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$FIXPLIZZ_ROOT/install/helpers/fixplizz-env.sh"
+
+METADATA_SCAN_LIMIT=80
+
+COMMAND_KEYS=()
+ROUTE_COLLISIONS=()
+declare -A COMMAND_ROUTE
+declare -A COMMAND_BINARY
+declare -A COMMAND_GROUP
+declare -A COMMAND_NAME
+declare -A COMMAND_SUMMARY
+declare -A COMMAND_ARGS
+declare -A COMMAND_ALIASES
+declare -A COMMAND_HIDDEN
+declare -A COMMAND_REQUIRES_SUDO
+declare -A COMMAND_METADATA_ERRORS
+declare -A ROUTE_TO_KEY
+
+join_words() {
+  local separator="$1"
+  shift
+  local joined=""
+  local word
+
+  for word in "$@"; do
+    if [[ -z $joined ]]; then
+      joined="$word"
+    else
+      joined+="$separator$word"
+    fi
+  done
+
+  printf '%s' "$joined"
+}
+
+append_pipe_value() {
+  local current="$1"
+  local addition="$2"
+
+  if [[ -z $current ]]; then
+    printf '%s' "$addition"
+  else
+    printf '%s|%s' "$current" "$addition"
+  fi
+}
+
+register_route() {
+  local route="$1"
+  local key="$2"
+
+  [[ -z $route || -z $key ]] && return
+
+  if [[ -n ${ROUTE_TO_KEY[$route]:-} && ${ROUTE_TO_KEY[$route]} != "$key" ]]; then
+    ROUTE_COLLISIONS+=("$route -> ${ROUTE_TO_KEY[$route]} conflicts with $key")
+    return
+  fi
+
+  ROUTE_TO_KEY["$route"]="$key"
+
+  return 0
+}
+
+register_command() {
+  local file="$1"
+  local file_binary="${file##*/}"
+  local stem="${file_binary#fixplizz-}"
+  local group="${stem%%-*}"
+  local name=""
+  local summary=""
+  local args=""
+  local aliases=""
+  local hidden="false"
+  local requires_sudo="false"
+  local metadata_errors=""
+  local line=""
+  local line_count=0
+  local metadata_key=""
+  local metadata_value=""
+
+  [[ $file_binary == "fixplizz" ]] && return
+
+  if [[ $stem == *-* ]]; then
+    name="${stem#*-}"
+    name="${name//-/ }"
+  fi
+
+  while IFS= read -r line && ((line_count < METADATA_SCAN_LIMIT)); do
+    line_count=$((line_count + 1))
+
+    if ((line_count == 1)) && [[ $line == "#!"* ]]; then
+      continue
+    fi
+
+    [[ $line =~ ^[[:space:]]*$ ]] && continue
+    [[ $line =~ ^[[:space:]]*# ]] || break
+
+    if [[ $line =~ ^[[:space:]]*#[[:space:]]*fixplizz:([[:alnum:]_-]+)=(.*)$ ]]; then
+      metadata_key="${BASH_REMATCH[1]}"
+      metadata_value="${BASH_REMATCH[2]}"
+      metadata_value="${metadata_value%$'\r'}"
+      metadata_value="${metadata_value//$'\t'/ }"
+
+      case "$metadata_key" in
+        group)
+          group="$metadata_value"
+          ;;
+        name)
+          name="$metadata_value"
+          ;;
+        summary)
+          summary="$metadata_value"
+          ;;
+        args)
+          args="$metadata_value"
+          ;;
+        alias | aliases)
+          aliases="$metadata_value"
+          ;;
+        hidden)
+          if [[ $metadata_value == "true" ]]; then
+            hidden="true"
+          else
+            metadata_errors=$(append_pipe_value "$metadata_errors" "hidden must be omitted or true")
+          fi
+          ;;
+        requires-sudo)
+          if [[ $metadata_value == "true" ]]; then
+            requires_sudo="true"
+          else
+            metadata_errors=$(append_pipe_value "$metadata_errors" "requires-sudo must be omitted or true")
+          fi
+          ;;
+        *)
+          ;;
+      esac
+    fi
+  done <"$file"
+
+  [[ -n $summary ]] || metadata_errors=$(append_pipe_value "$metadata_errors" "summary metadata is required")
+
+  local route="fixplizz $group"
+  if [[ -n $name ]]; then
+    route+=" $name"
+  fi
+
+  local key="$file_binary"
+  COMMAND_KEYS+=("$key")
+  COMMAND_ROUTE["$key"]="$route"
+  COMMAND_BINARY["$key"]="$file_binary"
+  COMMAND_GROUP["$key"]="$group"
+  COMMAND_NAME["$key"]="$name"
+  COMMAND_SUMMARY["$key"]="${summary:-Run the $group command}"
+  COMMAND_ARGS["$key"]="$args"
+  COMMAND_ALIASES["$key"]="$aliases"
+  COMMAND_HIDDEN["$key"]="$hidden"
+  COMMAND_REQUIRES_SUDO["$key"]="$requires_sudo"
+  COMMAND_METADATA_ERRORS["$key"]="$metadata_errors"
+
+  register_route "$route" "$key"
+
+  local old_ifs="$IFS"
+  local alias_route
+  IFS='|'
+  for alias_route in $aliases; do
+    alias_route="${alias_route# }"
+    alias_route="${alias_route% }"
+    [[ -z $alias_route ]] && continue
+    register_route "$alias_route" "$key" true
+  done
+  IFS="$old_ifs"
+
+  return 0
+}
+
+load_commands() {
+  local file
+
+  COMMAND_KEYS=()
+  ROUTE_COLLISIONS=()
+  ROUTE_TO_KEY=()
+
+  for file in "$FIXPLIZZ_BIN_DIR"/fixplizz-*; do
+    [[ -f $file && -x $file ]] || continue
+    register_command "$file"
+  done
+}
+
+sorted_keys() {
+  local include_all="$1"
+  local key
+
+  for key in "${COMMAND_KEYS[@]}"; do
+    if [[ $include_all != "true" && ${COMMAND_HIDDEN[$key]} == "true" ]]; then
+      continue
+    fi
+    printf '%s\t%s\n' "${COMMAND_ROUTE[$key]}" "$key"
+  done | sort -u | cut -f2-
+}
+
+show_main_help() {
+  cat <<'EOF'
+Fixplizz Workstation command center
+
+Usage:
+  fixplizz <command> [args...]
+  fixplizz commands [--all] [--json] [--check]
+
+Common commands:
+  fixplizz help          Show this help
+  fixplizz version       Show Fixplizz Workstation version
+  fixplizz commands      List available commands
+  fixplizz doctor        Run PR 1 diagnostics
+  fixplizz status        Show detected workstation state
+
+PR 1 status:
+  Full workstation installation is disabled by default.
+EOF
+}
+
+json_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '"%s"' "$value"
+}
+
+emit_command_records() {
+  local include_all="$1"
+  local key
+
+  while IFS= read -r key; do
+    [[ -n $key ]] || continue
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "${COMMAND_ROUTE[$key]}" \
+      "${COMMAND_BINARY[$key]}" \
+      "${COMMAND_GROUP[$key]}" \
+      "${COMMAND_NAME[$key]}" \
+      "${COMMAND_SUMMARY[$key]}" \
+      "${COMMAND_ARGS[$key]}" \
+      "${COMMAND_ALIASES[$key]}" \
+      "${COMMAND_REQUIRES_SUDO[$key]}" \
+      "${COMMAND_HIDDEN[$key]}"
+  done < <(sorted_keys "$include_all")
+}
+
+show_commands_json() {
+  local include_all="$1"
+  local first_command="true"
+  local key
+  local old_ifs
+  local alias_route
+
+  printf '{"ok":true,"command":"commands","commands":['
+  while IFS= read -r key; do
+    [[ -n $key ]] || continue
+    [[ $first_command == "true" ]] || printf ','
+    first_command="false"
+
+    printf '{'
+    printf '"route":%s,' "$(json_string "${COMMAND_ROUTE[$key]}")"
+    printf '"binary":%s,' "$(json_string "${COMMAND_BINARY[$key]}")"
+    printf '"group":%s,' "$(json_string "${COMMAND_GROUP[$key]}")"
+    printf '"name":%s,' "$(json_string "${COMMAND_NAME[$key]}")"
+    printf '"summary":%s,' "$(json_string "${COMMAND_SUMMARY[$key]}")"
+    printf '"args":%s,' "$(json_string "${COMMAND_ARGS[$key]}")"
+    printf '"aliases":['
+    old_ifs="$IFS"
+    IFS='|'
+    local first_alias="true"
+    for alias_route in ${COMMAND_ALIASES[$key]}; do
+      alias_route="${alias_route# }"
+      alias_route="${alias_route% }"
+      [[ -n $alias_route ]] || continue
+      [[ $first_alias == "true" ]] || printf ','
+      first_alias="false"
+      json_string "$alias_route"
+    done
+    IFS="$old_ifs"
+    printf '],'
+    printf '"requires_sudo":%s,' "${COMMAND_REQUIRES_SUDO[$key]}"
+    printf '"hidden":%s' "${COMMAND_HIDDEN[$key]}"
+    printf '}'
+  done < <(sorted_keys "$include_all")
+  printf ']}\n'
+}
+
+show_commands() {
+  local include_all="$1"
+  local key
+
+  if [[ $include_all == "true" ]]; then
+    printf 'Fixplizz commands (all):\n'
+  else
+    printf 'Fixplizz commands:\n'
+  fi
+
+  while IFS= read -r key; do
+    [[ -n $key ]] || continue
+    printf '  %-28s %s\n' "${COMMAND_ROUTE[$key]} ${COMMAND_ARGS[$key]}" "${COMMAND_SUMMARY[$key]}"
+  done < <(sorted_keys "$include_all")
+}
+
+show_commands_check() {
+  local failures=0
+  local collision
+  local key
+  local error
+
+  for collision in "${ROUTE_COLLISIONS[@]}"; do
+    printf 'Route collision: %s\n' "$collision" >&2
+    failures=$((failures + 1))
+  done
+
+  for key in "${COMMAND_KEYS[@]}"; do
+    if [[ -n ${COMMAND_METADATA_ERRORS[$key]} ]]; then
+      while IFS= read -r error; do
+        [[ -n $error ]] || continue
+        printf 'Invalid metadata in %s: %s\n' "${COMMAND_BINARY[$key]}" "$error" >&2
+        failures=$((failures + 1))
+      done < <(printf '%s\n' "${COMMAND_METADATA_ERRORS[$key]}" | tr '|' '\n')
+    fi
+  done
+
+  if ((failures > 0)); then
+    printf 'Command metadata check failed (%s issues)\n' "$failures" >&2
+    return 1
+  fi
+
+  printf 'Command metadata check passed (%s commands)\n' "${#COMMAND_KEYS[@]}"
+}
+
+parse_commands_args() {
+  local include_all="false"
+  local json="false"
+  local check="false"
+
+  shift
+  while (($# > 0)); do
+    case "$1" in
+      --all)
+        include_all="true"
+        ;;
+      --json)
+        json="true"
+        ;;
+      --check)
+        check="true"
+        ;;
+      --help | -h)
+        printf 'Usage: fixplizz commands [--all] [--json] [--check]\n'
+        return 0
+        ;;
+      *)
+        printf 'Unknown option for fixplizz commands: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+    shift
+  done
+
+  if [[ $check == "true" ]]; then
+    show_commands_check
+  elif [[ $json == "true" ]]; then
+    show_commands_json "$include_all"
+  else
+    show_commands "$include_all"
+  fi
+}
+
+resolve_route() {
+  local argc="$1"
+  shift
+  local args=("$@")
+  local prefix_count
+  local route
+  local key
+
+  for ((prefix_count = argc; prefix_count >= 1; prefix_count--)); do
+    route="fixplizz $(join_words " " "${args[@]:0:prefix_count}")"
+    key="${ROUTE_TO_KEY[$route]:-}"
+    if [[ -n $key ]]; then
+      RESOLVED_KEY="$key"
+      RESOLVED_COUNT="$prefix_count"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+dispatch_or_help() {
+  local args=("$@")
+  local remaining
+  local binary_path
+
+  load_commands
+
+  if resolve_route "$#" "${args[@]}"; then
+    remaining=("${args[@]:RESOLVED_COUNT}")
+    binary_path="$FIXPLIZZ_BIN_DIR/${COMMAND_BINARY[$RESOLVED_KEY]}"
+
+    if ((${#remaining[@]} > 0)) && [[ ${remaining[0]} == "--help" || ${remaining[0]} == "-h" ]]; then
+      printf 'Usage: %s %s\n\n%s\n' "${COMMAND_ROUTE[$RESOLVED_KEY]}" "${COMMAND_ARGS[$RESOLVED_KEY]}" "${COMMAND_SUMMARY[$RESOLVED_KEY]}"
+      return 0
+    fi
+
+    exec "$binary_path" "${remaining[@]}"
+  fi
+
+  printf 'Unknown Fixplizz command: fixplizz %s\n' "${args[*]}" >&2
+  printf 'Run fixplizz commands to discover available commands.\n' >&2
+  return 2
+}
+
+main() {
+  if (($# == 0)); then
+    show_main_help
+    return 0
+  fi
+
+  case "$1" in
+    --help | -h | help)
+      show_main_help
+      ;;
+    commands)
+      load_commands
+      parse_commands_args "$@"
+      ;;
+    *)
+      dispatch_or_help "$@"
+      ;;
+  esac
+}
+
+main "$@"

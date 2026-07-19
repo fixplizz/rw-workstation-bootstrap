@@ -1,0 +1,33 @@
+# Transcoding helpers have moved to omakub-transcode.
+
+transcode-video-1080p() {
+  omakub-transcode "$1" mp4 1080p
+}
+
+transcode-video-4K() {
+  omakub-transcode "$1" mp4 4k
+}
+
+transcode-video-gif() {
+  omakub-transcode "$1" gif 1080p
+}
+
+img2jpg() {
+  omakub-transcode "$1" jpg high
+}
+
+img2jpg-small() {
+  omakub-transcode "$1" jpg low
+}
+
+img2jpg-medium() {
+  omakub-transcode "$1" jpg medium
+}
+
+img2jpg-large() {
+  omakub-transcode "$1" jpg high
+}
+
+img2png() {
+  omakub-transcode "$1" png high
+}

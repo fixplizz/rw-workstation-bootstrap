@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, stable]
+  pull_request:
+
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shell tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats shellcheck shfmt python3
+
+      - name: Run validation
+        run: bash test/run.sh
+
+      - name: Secret scan
+        run: |
+          if grep -RInE '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|api[_-]?key|oauth[_-]?token|password=|secret=)' \
+            --exclude-dir=.git \
+            --exclude='*.png' \
+            --exclude='*.jpg' \
+            --exclude='*.jpeg' \
+            .; then
+            echo "Potential secret found" >&2
+            exit 1
+          fi

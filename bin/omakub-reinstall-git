@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# omakub:summary=Reinstall the Omabuntu source directory from git.
+
+set -e
+
+# Reinstall the Omakub configuration directory from the git source.
+
+git clone --depth=1 "https://github.com/omakasui/omabuntu.git" ~/.local/share/omakub-new >/dev/null
+DEFAULT_URL="https://github.com/omakasui/omabuntu.git"
+DEFAULT_BRANCH="main"
+
+REMOTE_URL=$(git -C "$OMAKUB_PATH" remote get-url origin 2>/dev/null || echo "$DEFAULT_URL")
+BRANCH=$(git -C "$OMAKUB_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "$DEFAULT_BRANCH")
+
+# Prefer HTTPS for cloning: avoids needing SSH keys configured, which
+# matters if reinstall is being run as a recovery action.
+case "$REMOTE_URL" in
+  git@github.com:*) REMOTE_URL="https://github.com/${REMOTE_URL#git@github.com:}" ;;
+esac
+
+git clone --depth=1 --branch "$BRANCH" "$REMOTE_URL" ~/.local/share/omakub-new >/dev/null
+mv $OMAKUB_PATH ~/.local/share/omakub-old
+mv ~/.local/share/omakub-new $OMAKUB_PATH

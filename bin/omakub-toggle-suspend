@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# omakub:summary=Toggle suspend availability in the system menu.
+
+omakub-toggle \
+  --notification-summary "Suspend" \
+  --enabled-notification "󰒲   Suspend removed from system menu" \
+  --disabled-notification "󰒲   Suspend now available in system menu" \
+  suspend-off

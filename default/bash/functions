@@ -1,0 +1,1 @@
+for f in $OMAKUB_PATH/default/bash/fns/*; do source "$f"; done

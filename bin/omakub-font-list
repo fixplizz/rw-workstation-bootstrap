@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# omakub:summary=List available monospace fonts
+# omakub:examples=omakub font list | omakub font set "CaskaydiaMono Nerd Font"
+
+fc-list :spacing=100 -f "%{family[0]}\n" | grep -v -i -E 'emoji|signwriting|omakub' | sort -u

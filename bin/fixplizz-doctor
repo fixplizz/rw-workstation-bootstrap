@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# fixplizz:group=doctor
+# fixplizz:summary=Run PR 1 environment diagnostics
+# fixplizz:args=[--json]
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$ROOT/install/helpers/fixplizz-env.sh"
+# shellcheck source=install/helpers/detection.sh
+source "$ROOT/install/helpers/detection.sh"
+
+json=false
+if (($# > 0)); then
+  case "$1" in
+    --json)
+      json=true
+      ;;
+    --help | -h)
+      printf 'Usage: fixplizz doctor [--json]\n'
+      exit 0
+      ;;
+    *)
+      printf 'Unknown option for fixplizz doctor: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+fi
+
+CHECK_NAMES=()
+CHECK_STATUSES=()
+CHECK_MESSAGES=()
+
+json_string() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '"%s"' "$value"
+}
+
+add_check() {
+  CHECK_NAMES+=("$1")
+  CHECK_STATUSES+=("$2")
+  CHECK_MESSAGES+=("$3")
+}
+
+os_id="$(fixplizz_detect_os)"
+version="$(fixplizz_detect_version)"
+arch="$(fixplizz_detect_arch)"
+desktop="$(fixplizz_detect_desktop)"
+session="$(fixplizz_detect_session)"
+legacy="$(fixplizz_detect_legacy_installation)"
+
+if [[ "$os_id" == "ubuntu" ]]; then
+  add_check "os" "OK" "Ubuntu detected"
+else
+  add_check "os" "FAIL" "Detected OS: $os_id"
+fi
+
+if [[ "$version" == "26.04" ]]; then
+  add_check "version" "OK" "Ubuntu 26.04 detected"
+else
+  add_check "version" "FAIL" "Detected version: $version"
+fi
+
+if [[ "$arch" == "x86_64" ]]; then
+  add_check "architecture" "OK" "x86_64 detected"
+else
+  add_check "architecture" "FAIL" "Detected architecture: $arch"
+fi
+
+if [[ "$desktop" == *"GNOME"* ]]; then
+  add_check "desktop" "OK" "GNOME detected"
+else
+  add_check "desktop" "WARN" "GNOME not detected: $desktop"
+fi
+
+if [[ "$session" == "wayland" ]]; then
+  add_check "session" "OK" "Wayland detected"
+else
+  add_check "session" "WARN" "Wayland not detected: $session"
+fi
+
+for required in apt git curl jq gum; do
+  if fixplizz_has_command "$required"; then
+    add_check "$required" "OK" "$required is available"
+  else
+    add_check "$required" "WARN" "$required is not available"
+  fi
+done
+
+if mkdir -p "$FIXPLIZZ_STATE_HOME" "$FIXPLIZZ_CONFIG_HOME" "$FIXPLIZZ_CACHE_HOME" 2>/dev/null; then
+  add_check "runtime-directories" "OK" "User runtime directories are available"
+else
+  add_check "runtime-directories" "FAIL" "Cannot create user runtime directories"
+fi
+
+if [[ -w "$FIXPLIZZ_STATE_HOME" ]]; then
+  add_check "write-permissions" "OK" "State directory is writable"
+else
+  add_check "write-permissions" "FAIL" "State directory is not writable"
+fi
+
+if fixplizz_has_command getent && getent hosts github.com >/dev/null 2>&1; then
+  add_check "network" "OK" "github.com resolves"
+else
+  add_check "network" "SKIP" "Network check skipped or unavailable"
+fi
+
+if [[ "$legacy" == "none" ]]; then
+  add_check "legacy-installation" "OK" "No legacy installation detected"
+else
+  add_check "legacy-installation" "WARN" "Legacy installation detected; migration is out of PR 1 scope"
+fi
+
+ok=true
+warnings=()
+errors=()
+for index in "${!CHECK_NAMES[@]}"; do
+  case "${CHECK_STATUSES[$index]}" in
+    WARN)
+      warnings+=("${CHECK_NAMES[$index]}: ${CHECK_MESSAGES[$index]}")
+      ;;
+    FAIL)
+      ok=false
+      errors+=("${CHECK_NAMES[$index]}: ${CHECK_MESSAGES[$index]}")
+      ;;
+  esac
+done
+
+if [[ $json == true ]]; then
+  printf '{"ok":%s,"command":"doctor","checks":[' "$ok"
+  first="true"
+  for index in "${!CHECK_NAMES[@]}"; do
+    [[ $first == "true" ]] || printf ','
+    first="false"
+    printf '{"name":%s,"status":%s,"message":%s}' \
+      "$(json_string "${CHECK_NAMES[$index]}")" \
+      "$(json_string "${CHECK_STATUSES[$index]}")" \
+      "$(json_string "${CHECK_MESSAGES[$index]}")"
+  done
+  printf '],"warnings":['
+  first="true"
+  for item in "${warnings[@]}"; do
+    [[ $first == "true" ]] || printf ','
+    first="false"
+    json_string "$item"
+  done
+  printf '],"errors":['
+  first="true"
+  for item in "${errors[@]}"; do
+    [[ $first == "true" ]] || printf ','
+    first="false"
+    json_string "$item"
+  done
+  printf ']}\n'
+  if [[ $ok == true ]]; then
+    exit 0
+  fi
+  exit 1
+fi
+
+printf 'Fixplizz Workstation doctor\n\n'
+for index in "${!CHECK_NAMES[@]}"; do
+  printf '[%s] %s - %s\n' "${CHECK_STATUSES[$index]}" "${CHECK_NAMES[$index]}" "${CHECK_MESSAGES[$index]}"
+done
+
+[[ $ok == true ]]

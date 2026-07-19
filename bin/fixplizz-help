@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# fixplizz:group=help
+# fixplizz:summary=Show Fixplizz Workstation help
+
+set -Eeuo pipefail
+
+exec "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/fixplizz" --help
