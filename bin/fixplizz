@@ -2,7 +2,8 @@
 
 set -Eeuo pipefail
 
-FIXPLIZZ_BIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+FIXPLIZZ_ENTRYPOINT="$(readlink -f -- "${BASH_SOURCE[0]}")"
+FIXPLIZZ_BIN_DIR=$(cd -- "$(dirname -- "$FIXPLIZZ_ENTRYPOINT")" && pwd)
 FIXPLIZZ_ROOT=$(cd -- "$FIXPLIZZ_BIN_DIR/.." && pwd)
 export FIXPLIZZ_ROOT
 
