@@ -30,8 +30,8 @@ SH
   printf 'FIXPLIZZ_BOOT_SHA256=%s\n' "$(sha256sum "$BOOT_FIXTURE" | awk '{print $1}')" >"$MANIFEST_FIXTURE"
   cat >"$fake_bin/git" <<'SH'
 #!/usr/bin/env bash
-printf '%s\t%s\n' 1111111111111111111111111111111111111111 refs/tags/v0.1.0-rc3
-printf '%s\t%s\n' 2222222222222222222222222222222222222222 'refs/tags/v0.1.0-rc3^{}'
+printf '%s\t%s\n' 1111111111111111111111111111111111111111 refs/tags/v0.1.0-rc4
+printf '%s\t%s\n' 2222222222222222222222222222222222222222 'refs/tags/v0.1.0-rc4^{}'
 SH
   cat >"$fake_bin/curl" <<'SH'
 #!/usr/bin/env bash
@@ -71,7 +71,7 @@ SH
 }
 
 @test "execute requires disposable host acknowledgment before installation" {
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 "$SMOKE" --execute
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 "$SMOKE" --execute
   [ "$status" -eq 2 ]
   [[ "$output" == *"FIXPLIZZ_NATIVE_SMOKE_ACK"* ]]
   [ ! -e "$FIXPLIZZ_SMOKE_STATE_HOME/phase-state.json" ]
@@ -79,13 +79,13 @@ SH
 
 @test "native smoke rejects unsupported OS" {
   printf 'ID=debian\nVERSION_ID=13\n' >"$FIXPLIZZ_SMOKE_OS_RELEASE"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 "$SMOKE"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 "$SMOKE"
   [ "$status" -eq 3 ]
   [[ "$output" == *"Ubuntu 26.04"* ]]
 }
 
 @test "native smoke rejects unsupported architecture" {
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 FIXPLIZZ_SMOKE_ARCH=aarch64 "$SMOKE"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 FIXPLIZZ_SMOKE_ARCH=aarch64 "$SMOKE"
   [ "$status" -eq 3 ]
   [[ "$output" == *"x86_64"* ]]
 }
@@ -100,19 +100,19 @@ SH
 
 @test "tag resolves first and the single commit-addressed boot download is executed" {
   prepare_release_fixture
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
   [ "$status" -eq 0 ]
   [ "$(wc -l <"$CURL_LOG" | tr -d ' ')" -eq 2 ]
   [ "$(grep -Fc "/$EXPECTED_COMMIT/boot.sh" "$CURL_LOG")" -eq 1 ]
   [ "$(grep -Fc "/$EXPECTED_COMMIT/config/release-artifacts.rc" "$CURL_LOG")" -eq 1 ]
   [ "$(cat "$EXEC_LOG")" = "--profile mvp --noninteractive" ]
-  [ "$(find "$FIXPLIZZ_SMOKE_STATE_HOME" -name "boot-v0.1.0-rc3-$EXPECTED_COMMIT.sh" | wc -l | tr -d ' ')" -eq 1 ]
+  [ "$(find "$FIXPLIZZ_SMOKE_STATE_HOME" -name "boot-v0.1.0-rc4-$EXPECTED_COMMIT.sh" | wc -l | tr -d ' ')" -eq 1 ]
 }
 
 @test "checksum mismatch prevents verified boot execution" {
   prepare_release_fixture
   printf 'FIXPLIZZ_BOOT_SHA256=%064d\n' 0 >"$MANIFEST_FIXTURE"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
   [ "$status" -eq 6 ]
   [ ! -e "$EXEC_LOG" ]
   grep -Fq "/$EXPECTED_COMMIT/boot.sh" "$CURL_LOG"
@@ -122,10 +122,10 @@ SH
   prepare_release_fixture
   cat >"$BATS_TEST_TMPDIR/fake-bin/git" <<'SH'
 #!/usr/bin/env bash
-printf '%s\t%s\n' invalid 'refs/tags/v0.1.0-rc3^{}'
+printf '%s\t%s\n' invalid 'refs/tags/v0.1.0-rc4^{}'
 SH
   chmod +x "$BATS_TEST_TMPDIR/fake-bin/git"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; smoke_fetch_release_artifact; smoke_execute_verified_boot"
   [ "$status" -eq 6 ]
   [ ! -e "$CURL_LOG" ]
   [ ! -e "$EXEC_LOG" ]
@@ -133,7 +133,7 @@ SH
 
 @test "release artifact verification rejects a lightweight tag" {
   mkdir -p "$FIXPLIZZ_SMOKE_STATE_HOME"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; git() { printf '%040d refs/tags/v0.1.0-rc3\\n' 0; }; curl() { return 99; }; smoke_fetch_release_artifact"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; git() { printf '%040d refs/tags/v0.1.0-rc4\\n' 0; }; curl() { return 99; }; smoke_fetch_release_artifact"
   [ "$status" -eq 6 ]
   [[ "$output" == *"annotated"* ]]
 }
@@ -149,7 +149,7 @@ case "$*" in
 esac
 SH
   chmod +x "$HOME/.local/bin/fixplizz"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; smoke_run_cli_checks first"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; smoke_run_cli_checks first"
   [ "$status" -eq 7 ]
   [[ "$output" == *"does not match"* ]]
 }
@@ -162,7 +162,7 @@ SH
 }
 
 @test "after-reboot phase requires saved phase state" {
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 "$SMOKE" --verify-after-reboot
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 "$SMOKE" --verify-after-reboot
   [ "$status" -eq 4 ]
   [[ "$output" == *"phase state"* ]]
 }
@@ -170,19 +170,19 @@ SH
 @test "after-reboot phase rejects a different requested release ref" {
   mkdir -p "$FIXPLIZZ_SMOKE_STATE_HOME"
   printf '%s\n' '{"phase":"pending-after-reboot","requested_rc_tag":"v0.1.0-rc2","resolved_commit_sha":"2222222222222222222222222222222222222222","expected_boot_sha256":"aaa","actual_boot_sha256":"aaa","executed_verified_artifact":true,"first_run_id":"one","second_run_id":"two","resume_source_run_id":"three","resume_result_run_id":"four","logout_required":"yes","reboot_required":"yes"}' >"$FIXPLIZZ_SMOKE_STATE_HOME/phase-state.json"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 bash -c "source '$SMOKE'; smoke_load_phase_state"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 bash -c "source '$SMOKE'; smoke_load_phase_state"
   [ "$status" -eq 4 ]
   [[ "$output" == *"does not match"* ]]
 }
 
 @test "phase state records the executed checksum-verified artifact" {
   mkdir -p "$FIXPLIZZ_SMOKE_STATE_HOME"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 RC_COMMIT_SHA=2222222222222222222222222222222222222222 MANIFEST_URL=https://raw.example/manifest BOOT_ARTIFACT_URL=https://raw.example/boot EXPECTED_BOOT_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ACTUAL_BOOT_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa VERIFIED_BOOT_FILE=verified-boot.sh EXECUTED_VERIFIED_ARTIFACT=true bash -c "source '$SMOKE'; smoke_write_phase_state"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 RC_COMMIT_SHA=2222222222222222222222222222222222222222 MANIFEST_URL=https://raw.example/manifest BOOT_ARTIFACT_URL=https://raw.example/boot EXPECTED_BOOT_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ACTUAL_BOOT_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa VERIFIED_BOOT_FILE=verified-boot.sh EXECUTED_VERIFIED_ARTIFACT=true bash -c "source '$SMOKE'; smoke_write_phase_state"
   [ "$status" -eq 0 ]
   run python - "$FIXPLIZZ_SMOKE_STATE_HOME/phase-state.json" <<'PY'
 import json, pathlib, sys
 data = json.loads(pathlib.Path(sys.argv[1]).read_text())
-assert data["requested_rc_tag"] == "v0.1.0-rc3"
+assert data["requested_rc_tag"] == "v0.1.0-rc4"
 assert data["resolved_commit_sha"] == "2222222222222222222222222222222222222222"
 assert data["manifest_url"] == "https://raw.example/manifest"
 assert data["boot_artifact_url"] == "https://raw.example/boot"
@@ -195,7 +195,7 @@ PY
 
 @test "report cannot declare PASS without verified artifact execution" {
   report="$BATS_TEST_TMPDIR/unverified-report.md"
-  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc3 EXECUTED_VERIFIED_ARTIFACT=false bash -c "source '$SMOKE'; smoke_write_report '$report' PASS"
+  run env FIXPLIZZ_SMOKE_REF=v0.1.0-rc4 EXECUTED_VERIFIED_ARTIFACT=false bash -c "source '$SMOKE'; smoke_write_report '$report' PASS"
   [ "$status" -ne 0 ]
   if [ -e "$report" ]; then
     ! grep -Fq 'Overall: PASS' "$report"
