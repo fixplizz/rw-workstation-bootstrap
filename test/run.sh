@@ -79,6 +79,7 @@ MVP_TEXT_FILES=(
   profiles/mvp
   config/sources.rc
   test/fixplizz-mvp.bats
+  test/fixplizz-boot.bats
   test/fixplizz-json.bats
   test/fixplizz-policy.bats
   test/fixplizz-sources.bats

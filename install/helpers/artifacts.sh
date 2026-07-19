@@ -65,3 +65,25 @@ fixplizz_install_flatpak_bundle() {
   flatpak install --user --noninteractive -y "$bundle"
   rm -f "$bundle"
 }
+
+fixplizz_install_zip_fonts() {
+  local name="$1" url="$2" sha="$3"
+  local archive extract_dir font_dir font
+  archive="$(mktemp "${TMPDIR:-/tmp}/fixplizz-${name}.XXXXXX.zip")"
+  extract_dir="$(mktemp -d "${TMPDIR:-/tmp}/fixplizz-${name}.XXXXXX")"
+  if ! curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$archive" "$url" ||
+    ! fixplizz_verify_sha256 "$archive" "$sha"; then
+    rm -f "$archive"
+    rm -rf "$extract_dir"
+    return 1
+  fi
+  unzip -q "$archive" -d "$extract_dir"
+  font_dir="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/fixplizz-$name"
+  mkdir -p "$font_dir"
+  while IFS= read -r -d '' font; do
+    install -m 0644 "$font" "$font_dir/$(basename -- "$font")"
+  done < <(find "$extract_dir" -type f \( -name '*.ttf' -o -name '*.otf' \) -print0)
+  command -v fc-cache >/dev/null 2>&1 && fc-cache -f "$font_dir" >/dev/null
+  rm -f "$archive"
+  rm -rf "$extract_dir"
+}

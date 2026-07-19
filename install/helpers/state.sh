@@ -60,11 +60,18 @@ fixplizz_module_state_path() {
 fixplizz_write_module_state() {
   local run_id="$1" module="$2" status="$3"
   local reused="${4:-false}" reason="${5:-}"
+  local installed_version="@null" source="@null"
+  if [[ $status == completed ]]; then
+    installed_version="$(tr -d '[:space:]' <"$FIXPLIZZ_ROOT/version")"
+    source="profile:$module"
+  fi
   fixplizz_json_write "$(fixplizz_module_state_path "$run_id" "$module")" \
     "module=$module" \
     "status=$status" \
     "reused=@$reused" \
     "reason=${reason:-@null}" \
+    "installed_version=$installed_version" \
+    "source=$source" \
     "updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 

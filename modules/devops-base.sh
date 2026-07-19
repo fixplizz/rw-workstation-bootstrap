@@ -6,7 +6,7 @@ MODULE_NAME=devops-base
 APT_PACKAGES=(ansible age docker.io docker-compose-v2)
 FLATPAK_APPS=()
 VERIFY_COMMANDS=(docker kubectl helm k9s tofu ansible sops age trivy gitleaks hadolint)
-PLANNED_ACTIONS=('add official Docker deb822 source and compose plugin' 'install pinned kubectl, Helm, k9s, OpenTofu, SOPS, Trivy, Gitleaks and Hadolint sources' 'idempotently add current user to docker group; logout may be required')
+PLANNED_ACTIONS=('install Docker Engine and Compose v2 from Ubuntu' 'install pinned kubectl, Helm, k9s, OpenTofu, SOPS, Trivy, Gitleaks and Hadolint sources' 'idempotently add current user to docker group; logout may be required')
 module_apply_custom() {
   [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 ]] && return 0
   fixplizz_install_binary kubectl "$KUBECTL_URL" "$KUBECTL_SHA256" kubectl

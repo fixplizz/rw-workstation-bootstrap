@@ -11,6 +11,7 @@ module_apply_custom() {
   [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 ]] && return 0
   fixplizz_install_tar_binary starship "$STARSHIP_URL" "$STARSHIP_SHA256" starship starship
   fixplizz_install_tar_binary zoxide "$ZOXIDE_URL" "$ZOXIDE_SHA256" zoxide zoxide
+  fixplizz_install_zip_fonts jetbrains-mono "$NERD_FONT_URL" "$NERD_FONT_SHA256"
   fixplizz_install_shell_integration "$HOME/.bashrc"
 }
 source "$ROOT/install/helpers/module.sh"

@@ -85,3 +85,16 @@ PY
   [[ "$output" != *"No such file"* ]]
   [[ "$output" != *"command not found"* ]]
 }
+
+@test "completed module state records source and installed version" {
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" install --profile mvp --noninteractive
+  [ "$status" -eq 0 ]
+  run_id="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+  python - "$FIXPLIZZ_STATE_HOME/runs/$run_id/modules/core.json" <<'PY'
+import json, pathlib, sys
+data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+assert data["status"] == "completed"
+assert data["installed_version"] == "0.1.0-rc1"
+assert data["source"] == "profile:core"
+PY
+}

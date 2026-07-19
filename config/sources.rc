@@ -9,6 +9,10 @@ ZOXIDE_VERSION=0.10.0
 ZOXIDE_URL=https://github.com/ajeetdsouza/zoxide/releases/download/v0.10.0/zoxide-0.10.0-x86_64-unknown-linux-musl.tar.gz
 ZOXIDE_SHA256=2d93385b99f3e82cf2701609a1bffcad863fbeb75aa3fe7eb6be4d29be68b1ae
 
+NERD_FONT_VERSION=3.4.0
+NERD_FONT_URL=https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip
+NERD_FONT_SHA256=76f05ff3ace48a464a6ca57977998784ff7bdbb65a6d915d7e401cd3927c493c
+
 MISE_VERSION=2026.7.7
 MISE_URL=https://github.com/jdx/mise/releases/download/v2026.7.7/mise-v2026.7.7-linux-x64
 MISE_SHA256=429f71e7e989908bf975aafac9066329c16e2d8fc7cd8e74fdf21dd6300ffe7c
@@ -57,6 +61,10 @@ NETBIRD_VERSION=0.74.7
 NETBIRD_URL=https://github.com/netbirdio/netbird/releases/download/v0.74.7/netbird_0.74.7_linux_amd64.tar.gz
 NETBIRD_SHA256=ff46fa7d9e5b07b6ad8fa731be2ac11193cec29dc139702901b00ba5763ca34a
 
+RUSTDESK_VERSION=1.4.9
+RUSTDESK_URL=https://github.com/rustdesk/rustdesk/releases/download/1.4.9/rustdesk-1.4.9-x86_64.flatpak
+RUSTDESK_SHA256=d71b1c6ac2950c06613464a5d253bc90fc541811824ba84c4d91abeb45679674
+
 TERMIX_VERSION=2.5.0
 TERMIX_URL=https://github.com/Termix-SSH/Termix/releases/download/release-2.5.0-tag/termix_linux_flatpak.flatpak
 TERMIX_SHA256=afbb553b206941c8b25d07fa8c0389ce92c89279f9d87f43cf574a2ee25fcb89
@@ -67,7 +75,7 @@ PNPM_VERSION=11.15.0
 
 fixplizz_validate_sources() {
   local prefix url sha url_key sha_key
-  for prefix in STARSHIP ZOXIDE MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD TERMIX; do
+  for prefix in STARSHIP ZOXIDE NERD_FONT MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD RUSTDESK TERMIX; do
     url_key="${prefix}_URL"
     sha_key="${prefix}_SHA256"
     url="${!url_key}"
