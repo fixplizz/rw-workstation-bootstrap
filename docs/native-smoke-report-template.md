@@ -2,9 +2,14 @@
 
 - Tester:
 - Date/time (UTC):
-- RC tag:
-- RC commit SHA:
-- boot.sh SHA256:
+- Requested RC tag:
+- Resolved commit SHA:
+- Manifest URL or commit-relative path:
+- Boot artifact URL or commit-relative path:
+- Expected boot SHA256:
+- Actual boot SHA256:
+- Verified file path:
+- executed_verified_artifact: true / false
 - Host hardware:
 - GPU:
 - Secure Boot:
@@ -24,10 +29,12 @@
 ## Automated results
 
 - Host preflight:
-- Immutable tag resolution:
-- Saved boot artifact:
-- boot.sh checksum verification:
-- Public one-command bootstrap:
+- Public artifact downloaded from GitHub:
+- Tag resolved to commit:
+- Manifest verified:
+- Saved boot artifact downloaded exactly once:
+- boot.sh checksum verified:
+- Verified boot.sh executed through stdin interface:
 - Installed CLI checks:
 - Doctor JSON validation:
 - Status JSON validation:
@@ -63,4 +70,4 @@
 - Failures or warnings:
 - Overall: PENDING_AFTER_REBOOT / PENDING_MANUAL_GUI / PASS / FAIL
 
-PASS requires successful automated phases and explicit confirmation of every manual GUI item. Do not include tokens, passwords, environment secrets, SSH private keys, machine-unique credentials or private configuration.
+PASS requires `executed_verified_artifact: true`, matching expected and actual boot SHA256 values, successful automated phases and explicit confirmation of every manual GUI item. Do not include tokens, passwords, environment secrets, authorization headers, SSH private keys, machine-unique credentials or private configuration.

@@ -14,7 +14,12 @@ VERSIONS_FILE="$SMOKE_STATE_HOME/tool-versions.txt"
 GUI_CHECKLIST_FILE="$SMOKE_STATE_HOME/manual-gui-checklist.txt"
 
 RC_COMMIT_SHA="${RC_COMMIT_SHA:-pending}"
-BOOT_SHA256="${BOOT_SHA256:-pending}"
+MANIFEST_URL="${MANIFEST_URL:-pending}"
+BOOT_ARTIFACT_URL="${BOOT_ARTIFACT_URL:-pending}"
+EXPECTED_BOOT_SHA256="${EXPECTED_BOOT_SHA256:-pending}"
+ACTUAL_BOOT_SHA256="${ACTUAL_BOOT_SHA256:-pending}"
+VERIFIED_BOOT_FILE="${VERIFIED_BOOT_FILE:-pending}"
+EXECUTED_VERIFIED_ARTIFACT="${EXECUTED_VERIFIED_ARTIFACT:-false}"
 FIRST_RUN_ID="${FIRST_RUN_ID:-pending}"
 SECOND_RUN_ID="${SECOND_RUN_ID:-pending}"
 RESUME_SOURCE_RUN_ID="${RESUME_SOURCE_RUN_ID:-pending}"
@@ -30,14 +35,14 @@ smoke_fail() {
 }
 
 smoke_require_ref() {
-  [[ -n ${FIXPLIZZ_SMOKE_REF:-} ]] || smoke_fail 2 'FIXPLIZZ_SMOKE_REF is required (for example v0.1.0-rc2).'
+  [[ -n ${FIXPLIZZ_SMOKE_REF:-} ]] || smoke_fail 2 'FIXPLIZZ_SMOKE_REF is required (for example v0.1.0-rc3).'
   case "$FIXPLIZZ_SMOKE_REF" in
     main | master | latest | refs/heads/* | */latest | *latest/*)
       smoke_fail 2 "FIXPLIZZ_SMOKE_REF must be an immutable release tag, not $FIXPLIZZ_SMOKE_REF."
       ;;
   esac
   [[ $FIXPLIZZ_SMOKE_REF =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$ ]] ||
-    smoke_fail 2 'FIXPLIZZ_SMOKE_REF must be an immutable RC tag such as v0.1.0-rc2.'
+    smoke_fail 2 'FIXPLIZZ_SMOKE_REF must be an immutable RC tag such as v0.1.0-rc3.'
 }
 
 smoke_os_field() {
@@ -104,35 +109,58 @@ smoke_require_tools_and_network() {
 smoke_print_plan() {
   cat <<EOF
 Fixplizz native acceptance plan
-  immutable ref: $FIXPLIZZ_SMOKE_REF
-  public boot: https://raw.githubusercontent.com/$REPOSITORY_SLUG/$FIXPLIZZ_SMOKE_REF/boot.sh
+  requested RC tag: $FIXPLIZZ_SMOKE_REF
+  public artifact downloaded from GitHub
+  tag resolved to commit
+  manifest verified
+  boot.sh checksum verified
+  verified boot.sh executed through stdin interface
   phase 1: verify artifact, public bootstrap, installed CLI checks, second run, isolated resume
   phase 2: post-logout/reboot CLI, GNOME, Docker, Flatpak, service and authorization checks
   report: $REPORT_FILE
 EOF
 }
 
-smoke_fetch_release_artifact() {
-  local boot_url manifest_url boot_file manifest_file expected_sha refs
-  boot_url="https://raw.githubusercontent.com/$REPOSITORY_SLUG/${FIXPLIZZ_SMOKE_REF}/boot.sh"
-  manifest_url="https://raw.githubusercontent.com/$REPOSITORY_SLUG/${FIXPLIZZ_SMOKE_REF}/config/release-artifacts.rc"
-  boot_file="$SMOKE_STATE_HOME/boot-${FIXPLIZZ_SMOKE_REF}.sh"
-  manifest_file="$SMOKE_STATE_HOME/release-artifacts-${FIXPLIZZ_SMOKE_REF}.rc"
-
-  mkdir -p "$SMOKE_STATE_HOME"
+smoke_resolve_release_ref() {
+  local refs
   refs="$(git ls-remote --tags "$REPOSITORY_URL" "refs/tags/$FIXPLIZZ_SMOKE_REF" "refs/tags/$FIXPLIZZ_SMOKE_REF^{}")"
   RC_COMMIT_SHA="$(printf '%s\n' "$refs" | awk -v ref="refs/tags/$FIXPLIZZ_SMOKE_REF^{}" '$2 == ref {print $1}')"
   [[ $RC_COMMIT_SHA =~ ^[0-9a-f]{40}$ ]] ||
     smoke_fail 6 "Cannot resolve $FIXPLIZZ_SMOKE_REF as an immutable annotated tag."
+}
 
-  curl -fsSL --retry 3 "$boot_url" -o "$boot_file"
-  curl -fsSL --retry 3 "$manifest_url" -o "$manifest_file"
-  expected_sha="$(awk -F= '$1 == "FIXPLIZZ_BOOT_SHA256" {print $2}' "$manifest_file")"
-  [[ $expected_sha =~ ^[0-9a-f]{64}$ ]] || smoke_fail 6 'Release manifest does not contain FIXPLIZZ_BOOT_SHA256.'
-  BOOT_SHA256="$(sha256sum "$boot_file" | awk '{print $1}')"
-  [[ $BOOT_SHA256 == "$expected_sha" ]] || smoke_fail 6 "boot.sh SHA256 mismatch: expected $expected_sha, got $BOOT_SHA256."
-  chmod 0755 "$boot_file"
-  printf 'Verified %s at commit %s with boot.sh SHA256 %s.\n' "$FIXPLIZZ_SMOKE_REF" "$RC_COMMIT_SHA" "$BOOT_SHA256"
+smoke_fetch_release_artifact() {
+  local manifest_file
+  mkdir -p "$SMOKE_STATE_HOME"
+  smoke_resolve_release_ref
+
+  MANIFEST_URL="https://raw.githubusercontent.com/$REPOSITORY_SLUG/$RC_COMMIT_SHA/config/release-artifacts.rc"
+  BOOT_ARTIFACT_URL="https://raw.githubusercontent.com/$REPOSITORY_SLUG/$RC_COMMIT_SHA/boot.sh"
+  manifest_file="$SMOKE_STATE_HOME/release-artifacts-${FIXPLIZZ_SMOKE_REF}-${RC_COMMIT_SHA}.rc"
+  VERIFIED_BOOT_FILE="$SMOKE_STATE_HOME/boot-${FIXPLIZZ_SMOKE_REF}-${RC_COMMIT_SHA}.sh"
+
+  curl -fsSL --retry 3 "$MANIFEST_URL" -o "$manifest_file"
+  curl -fsSL --retry 3 "$BOOT_ARTIFACT_URL" -o "$VERIFIED_BOOT_FILE"
+  EXPECTED_BOOT_SHA256="$(awk -F= '$1 == "FIXPLIZZ_BOOT_SHA256" {print $2}' "$manifest_file")"
+  [[ $EXPECTED_BOOT_SHA256 =~ ^[0-9a-f]{64}$ ]] || smoke_fail 6 'Release manifest does not contain FIXPLIZZ_BOOT_SHA256.'
+  ACTUAL_BOOT_SHA256="$(sha256sum "$VERIFIED_BOOT_FILE" | awk '{print $1}')"
+  [[ $ACTUAL_BOOT_SHA256 == "$EXPECTED_BOOT_SHA256" ]] ||
+    smoke_fail 6 "boot.sh SHA256 mismatch: expected $EXPECTED_BOOT_SHA256, got $ACTUAL_BOOT_SHA256."
+  chmod 0444 "$VERIFIED_BOOT_FILE"
+  printf 'Verified %s at commit %s with boot.sh SHA256 %s.\n' "$FIXPLIZZ_SMOKE_REF" "$RC_COMMIT_SHA" "$ACTUAL_BOOT_SHA256"
+}
+
+smoke_execute_verified_boot() {
+  local execution_sha
+  [[ $RC_COMMIT_SHA =~ ^[0-9a-f]{40}$ ]] || smoke_fail 6 'Resolved commit SHA is empty or invalid; refusing bootstrap execution.'
+  [[ $EXPECTED_BOOT_SHA256 =~ ^[0-9a-f]{64}$ && $ACTUAL_BOOT_SHA256 =~ ^[0-9a-f]{64}$ ]] ||
+    smoke_fail 6 'Verified boot checksum metadata is incomplete; refusing bootstrap execution.'
+  [[ $EXPECTED_BOOT_SHA256 == "$ACTUAL_BOOT_SHA256" ]] || smoke_fail 6 'Expected and actual boot checksums differ; refusing bootstrap execution.'
+  [[ -r $VERIFIED_BOOT_FILE ]] || smoke_fail 6 "Verified boot artifact is unavailable: $VERIFIED_BOOT_FILE"
+  execution_sha="$(sha256sum "$VERIFIED_BOOT_FILE" | awk '{print $1}')"
+  [[ $execution_sha == "$ACTUAL_BOOT_SHA256" ]] || smoke_fail 6 'Saved boot artifact changed after verification; refusing execution.'
+  bash -s -- --profile mvp --noninteractive <"$VERIFIED_BOOT_FILE"
+  EXECUTED_VERIFIED_ARTIFACT=true
 }
 
 smoke_run_cli_checks() {
@@ -276,21 +304,26 @@ smoke_host_value() {
 }
 
 smoke_write_phase_state() {
-  "$SMOKE_PYTHON" - "$PHASE_STATE" "$FIXPLIZZ_SMOKE_REF" "$RC_COMMIT_SHA" "$BOOT_SHA256" "$FIRST_RUN_ID" "$SECOND_RUN_ID" "$RESUME_SOURCE_RUN_ID" "$RESUME_RESULT_RUN_ID" "$LOGOUT_REQUIRED" "$REBOOT_REQUIRED" <<'PY'
+  "$SMOKE_PYTHON" - "$PHASE_STATE" "$FIXPLIZZ_SMOKE_REF" "$RC_COMMIT_SHA" "$MANIFEST_URL" "$BOOT_ARTIFACT_URL" "$EXPECTED_BOOT_SHA256" "$ACTUAL_BOOT_SHA256" "$VERIFIED_BOOT_FILE" "$EXECUTED_VERIFIED_ARTIFACT" "$FIRST_RUN_ID" "$SECOND_RUN_ID" "$RESUME_SOURCE_RUN_ID" "$RESUME_RESULT_RUN_ID" "$LOGOUT_REQUIRED" "$REBOOT_REQUIRED" <<'PY'
 import json, os, pathlib, sys, tempfile
 path = pathlib.Path(sys.argv[1])
 data = {
-    "schema": 1,
+    "schema": 2,
     "phase": "pending-after-reboot",
-    "rc_tag": sys.argv[2],
-    "rc_commit_sha": sys.argv[3],
-    "boot_sha256": sys.argv[4],
-    "first_run_id": sys.argv[5],
-    "second_run_id": sys.argv[6],
-    "resume_source_run_id": sys.argv[7],
-    "resume_result_run_id": sys.argv[8],
-    "logout_required": sys.argv[9],
-    "reboot_required": sys.argv[10],
+    "requested_rc_tag": sys.argv[2],
+    "resolved_commit_sha": sys.argv[3],
+    "manifest_url": sys.argv[4],
+    "boot_artifact_url": sys.argv[5],
+    "expected_boot_sha256": sys.argv[6],
+    "actual_boot_sha256": sys.argv[7],
+    "verified_file_path": sys.argv[8],
+    "executed_verified_artifact": sys.argv[9].lower() == "true",
+    "first_run_id": sys.argv[10],
+    "second_run_id": sys.argv[11],
+    "resume_source_run_id": sys.argv[12],
+    "resume_result_run_id": sys.argv[13],
+    "logout_required": sys.argv[14],
+    "reboot_required": sys.argv[15],
 }
 path.parent.mkdir(parents=True, exist_ok=True)
 fd, temporary = tempfile.mkstemp(prefix=".phase-state.", dir=path.parent)
@@ -308,29 +341,43 @@ smoke_load_phase_state() {
     "$SMOKE_PYTHON" - "$PHASE_STATE" <<'PY' | tr -d '\r'
 import json, pathlib, sys
 d = json.loads(pathlib.Path(sys.argv[1]).read_text())
-for key in ("phase", "rc_tag", "rc_commit_sha", "boot_sha256", "first_run_id", "second_run_id", "resume_source_run_id", "resume_result_run_id", "logout_required", "reboot_required"):
-    print(d.get(key, ""))
+for key in ("phase", "requested_rc_tag", "resolved_commit_sha", "manifest_url", "boot_artifact_url", "expected_boot_sha256", "actual_boot_sha256", "verified_file_path", "executed_verified_artifact", "first_run_id", "second_run_id", "resume_source_run_id", "resume_result_run_id", "logout_required", "reboot_required"):
+    value = d.get(key, "")
+    print(str(value).lower() if isinstance(value, bool) else value)
 PY
   )
   [[ ${state_values[0]:-} == pending-after-reboot ]] || smoke_fail 4 'Saved phase state is not pending after reboot.'
   if [[ -n $requested_ref && $requested_ref != "${state_values[1]}" ]]; then
     smoke_fail 4 "Requested release ref $requested_ref does not match saved phase ref ${state_values[1]}."
   fi
+  [[ ${state_values[2]:-} =~ ^[0-9a-f]{40}$ ]] || smoke_fail 4 'Saved phase state has an invalid resolved commit SHA.'
+  [[ ${state_values[5]:-} =~ ^[0-9a-f]{64}$ && ${state_values[5]} == "${state_values[6]:-}" ]] ||
+    smoke_fail 4 'Saved phase state does not contain matching verified boot checksums.'
+  [[ ${state_values[8]:-} == true ]] || smoke_fail 4 'Saved phase state does not confirm execution of the verified artifact.'
   FIXPLIZZ_SMOKE_REF="${state_values[1]}"
   export FIXPLIZZ_SMOKE_REF
   RC_COMMIT_SHA="${state_values[2]}"
-  BOOT_SHA256="${state_values[3]}"
-  FIRST_RUN_ID="${state_values[4]}"
-  SECOND_RUN_ID="${state_values[5]}"
-  RESUME_SOURCE_RUN_ID="${state_values[6]}"
-  RESUME_RESULT_RUN_ID="${state_values[7]}"
-  LOGOUT_REQUIRED="${state_values[8]}"
-  REBOOT_REQUIRED="${state_values[9]}"
+  MANIFEST_URL="${state_values[3]}"
+  BOOT_ARTIFACT_URL="${state_values[4]}"
+  EXPECTED_BOOT_SHA256="${state_values[5]}"
+  ACTUAL_BOOT_SHA256="${state_values[6]}"
+  VERIFIED_BOOT_FILE="${state_values[7]}"
+  EXECUTED_VERIFIED_ARTIFACT="${state_values[8]}"
+  FIRST_RUN_ID="${state_values[9]}"
+  SECOND_RUN_ID="${state_values[10]}"
+  RESUME_SOURCE_RUN_ID="${state_values[11]}"
+  RESUME_RESULT_RUN_ID="${state_values[12]}"
+  LOGOUT_REQUIRED="${state_values[13]}"
+  REBOOT_REQUIRED="${state_values[14]}"
 }
 
 smoke_write_report() {
   local report="$1" overall="$2"
   local hardware gpu secure_boot ubuntu kernel gnome session logout_performed reboot_performed ci_reference versions_summary
+  if [[ $overall == PASS && $EXECUTED_VERIFIED_ARTIFACT != true ]]; then
+    smoke_fail 11 'Cannot report PASS without executed_verified_artifact=true.'
+    return 11
+  fi
   hardware="$(smoke_host_value "lscpu | sed -n 's/^Model name:[[:space:]]*//p'" unknown)"
   gpu="$(smoke_host_value "lspci | grep -Ei 'VGA|3D|Display'" unknown)"
   secure_boot="$(smoke_host_value 'mokutil --sb-state' unknown)"
@@ -343,16 +390,22 @@ smoke_write_report() {
   ci_reference="${FIXPLIZZ_SMOKE_CI_RUN_REFERENCE:-https://github.com/fixplizz/rw-workstation-bootstrap/pull/2/checks}"
   versions_summary="$(test -r "$VERSIONS_FILE" && sed -E 's/(token|secret|password|key)[^[:space:]]*/[redacted]/Ig' "$VERSIONS_FILE" || printf 'pending')"
 
-  "$SMOKE_PYTHON" - "$report" "$overall" "${FIXPLIZZ_SMOKE_REF:-pending}" "$RC_COMMIT_SHA" "$BOOT_SHA256" "$hardware" "$gpu" "$secure_boot" "$ubuntu" "$kernel" "$gnome" "$session" "$FIRST_RUN_ID" "$SECOND_RUN_ID" "$RESUME_SOURCE_RUN_ID" "$RESUME_RESULT_RUN_ID" "$logout_performed" "$reboot_performed" "$ci_reference" "$versions_summary" <<'PY'
+  "$SMOKE_PYTHON" - "$report" "$overall" "${FIXPLIZZ_SMOKE_REF:-pending}" "$RC_COMMIT_SHA" "$MANIFEST_URL" "$BOOT_ARTIFACT_URL" "$EXPECTED_BOOT_SHA256" "$ACTUAL_BOOT_SHA256" "$VERIFIED_BOOT_FILE" "$EXECUTED_VERIFIED_ARTIFACT" "$hardware" "$gpu" "$secure_boot" "$ubuntu" "$kernel" "$gnome" "$session" "$FIRST_RUN_ID" "$SECOND_RUN_ID" "$RESUME_SOURCE_RUN_ID" "$RESUME_RESULT_RUN_ID" "$logout_performed" "$reboot_performed" "$ci_reference" "$versions_summary" <<'PY'
 import pathlib, sys
-(path, overall, tag, commit, boot_sha, hardware, gpu, secure_boot, ubuntu, kernel,
+(path, overall, tag, commit, manifest_url, boot_url, expected_sha, actual_sha,
+ verified_file, executed_verified, hardware, gpu, secure_boot, ubuntu, kernel,
  gnome, session, first_run, second_run, resume_source, resume_result, logout,
  reboot, ci_reference, versions) = sys.argv[1:]
 text = f"""# Fixplizz native smoke report
 
-- RC tag: {tag}
-- RC commit SHA: {commit}
-- boot.sh SHA256: {boot_sha}
+- Requested RC tag: {tag}
+- Resolved commit SHA: {commit}
+- Manifest URL: {manifest_url}
+- Boot artifact URL: {boot_url}
+- Expected boot SHA256: {expected_sha}
+- Actual boot SHA256: {actual_sha}
+- Verified file path: {verified_file}
+- executed_verified_artifact: {executed_verified}
 - Host hardware: {hardware}
 - GPU: {gpu}
 - Secure Boot: {secure_boot}
@@ -371,8 +424,11 @@ text = f"""# Fixplizz native smoke report
 
 ## Automated acceptance
 
-- Immutable annotated tag resolved: {"PASS" if commit != "pending" else "PENDING"}
-- Downloaded boot.sh checksum verification: {"PASS" if boot_sha != "pending" else "PENDING"}
+- Public artifact downloaded from GitHub: {"PASS" if boot_url != "pending" else "PENDING"}
+- Tag resolved to commit: {"PASS" if commit != "pending" else "PENDING"}
+- Manifest verified: {"PASS" if expected_sha != "pending" else "PENDING"}
+- boot.sh checksum verified: {"PASS" if expected_sha == actual_sha and actual_sha != "pending" else "PENDING"}
+- Verified boot.sh executed through stdin interface: {"PASS" if executed_verified == "true" else "PENDING"}
 - Public bootstrap run: {"PASS" if first_run != "pending" else "PENDING"}
 - First install log: ~/.local/state/fixplizz/runs/{first_run}/install.log
 - Installed CLI verification: {"PASS" if first_run != "pending" else "PENDING"}
@@ -491,7 +547,7 @@ EOF
 }
 
 smoke_execute_phase_one() {
-  local boot_url first_snapshot second_snapshot
+  local first_snapshot second_snapshot
   [[ ${FIXPLIZZ_NATIVE_SMOKE_ACK:-} == ubuntu-26.04-disposable ]] ||
     smoke_fail 2 'Set FIXPLIZZ_NATIVE_SMOKE_ACK=ubuntu-26.04-disposable before --execute.'
   smoke_validate_host
@@ -500,8 +556,7 @@ smoke_execute_phase_one() {
   smoke_fetch_release_artifact
   : >"$AUTOMATION_LOG"
 
-  boot_url="https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/${FIXPLIZZ_SMOKE_REF}/boot.sh"
-  curl -fsSL --retry 3 "$boot_url" | bash -s -- --profile mvp --noninteractive
+  smoke_execute_verified_boot
   [[ -x $INSTALLED_CLI ]] || smoke_fail 7 "Public bootstrap did not install $INSTALLED_CLI."
   smoke_run_cli_checks first
   FIRST_RUN_ID="$(smoke_current_run_id)"

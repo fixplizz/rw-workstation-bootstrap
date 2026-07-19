@@ -2,9 +2,12 @@
 
 set -Eeuo pipefail
 
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ROOT=''
+if [[ -n ${BASH_SOURCE[0]:-} ]]; then
+  ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+fi
 
-if [[ -r "$ROOT/install/helpers/fixplizz-env.sh" && -r "$ROOT/install/helpers/gate.sh" ]]; then
+if [[ -n $ROOT && -r "$ROOT/install/helpers/fixplizz-env.sh" && -r "$ROOT/install/helpers/gate.sh" ]]; then
   # shellcheck source=install/helpers/fixplizz-env.sh
   source "$ROOT/install/helpers/fixplizz-env.sh"
   # shellcheck source=install/helpers/gate.sh
@@ -58,11 +61,15 @@ for prerequisite in git curl mktemp; do
 done
 
 if [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 && -z ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
+  [[ -n $ROOT ]] || {
+    printf 'FIXPLIZZ_BOOT_SOURCE is required for stdin bootstrap test mode.\n' >&2
+    exit 5
+  }
   exec "$ROOT/install.sh" "$@"
 fi
 
 repo="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
-ref="${FIXPLIZZ_REF:-v0.1.0-rc2}"
+ref="${FIXPLIZZ_REF:-v0.1.0-rc3}"
 target="${FIXPLIZZ_PATH:-$HOME/.local/share/fixplizz}"
 state_home="${FIXPLIZZ_STATE_HOME:-$HOME/.local/state/fixplizz}"
 bin_home="${FIXPLIZZ_BIN_HOME:-$HOME/.local/bin}"

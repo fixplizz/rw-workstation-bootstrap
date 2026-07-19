@@ -19,10 +19,10 @@ setup() {
   export FIXPLIZZ_OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release"
 }
 
-@test "standalone boot works outside a checkout and forwards install arguments" {
+@test "standalone public boot works through stdin outside a checkout and forwards install arguments" {
   cp "$ROOT/boot.sh" "$BATS_TEST_TMPDIR/standalone-boot.sh"
   cd "$BATS_TEST_TMPDIR"
-  run bash "$BATS_TEST_TMPDIR/standalone-boot.sh" --noninteractive
+  run bash -s -- --noninteractive <"$BATS_TEST_TMPDIR/standalone-boot.sh"
   [ "$status" -eq 0 ]
   if [[ $(uname -s) == MINGW* ]]; then
     [ -f "$FIXPLIZZ_BIN_HOME/fixplizz" ]

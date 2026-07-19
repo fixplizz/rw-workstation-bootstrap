@@ -22,16 +22,16 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
 }
 
 @test "README leads with RC install and blocks stable release" {
-  grep -Fq 'v0.1.0-rc2' "$ROOT/README.md"
+  grep -Fq 'v0.1.0-rc3' "$ROOT/README.md"
   grep -Fq 'v0.1.0 remains blocked' "$ROOT/README.md"
   [ -f "$ROOT/docs/native-smoke-test.md" ]
   [ -f "$ROOT/docs/native-smoke-report-template.md" ]
 }
 
-@test "RC2 entrypoints and boot checksum manifest are consistent" {
-  grep -Fq 'v0.1.0-rc2' "$ROOT/boot.sh"
-  grep -Fq 'v0.1.0-rc2' "$ROOT/install/helpers/fixplizz-env.sh"
-  [ "$(tr -d '[:space:]' <"$ROOT/version")" = "0.1.0-rc2" ]
+@test "RC3 entrypoints and boot checksum manifest are consistent" {
+  grep -Fq 'v0.1.0-rc3' "$ROOT/boot.sh"
+  grep -Fq 'v0.1.0-rc3' "$ROOT/install/helpers/fixplizz-env.sh"
+  [ "$(tr -d '[:space:]' <"$ROOT/version")" = "0.1.0-rc3" ]
   source "$ROOT/config/release-artifacts.rc"
   [ "$FIXPLIZZ_BOOT_SHA256" = "$(sha256sum "$ROOT/boot.sh" | awk '{print $1}')" ]
 }
