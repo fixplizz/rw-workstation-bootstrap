@@ -54,13 +54,13 @@ run_gate() {
 }
 
 @test "test override variables are ignored without FIXPLIZZ_TEST_MODE" {
-  write_os_release ubuntu 26.04
+  write_os_release debian 13
   run env \
     FIXPLIZZ_OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release" \
     FIXPLIZZ_TEST_ARCH=x86_64 \
     bash -c "source '$ROOT/install/helpers/detection.sh'; fixplizz_detect_version"
   [ "$status" -eq 0 ]
-  [ "$output" != "26.04" ]
+  [ "$output" != "13" ]
 }
 
 @test "doctor warns when GNOME is absent" {

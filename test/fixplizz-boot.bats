@@ -13,7 +13,7 @@ setup() {
   export FIXPLIZZ_TEST_DESKTOP=ubuntu:GNOME
   export FIXPLIZZ_TEST_SESSION=wayland
   export FIXPLIZZ_BOOT_SOURCE="$ROOT"
-  export FIXPLIZZ_REF=mvp/one-command-workstation
+  export FIXPLIZZ_REF="$(git -C "$ROOT" rev-parse HEAD)"
   mkdir -p "$HOME"
   printf 'ID=ubuntu\nVERSION_ID=26.04\n' >"$BATS_TEST_TMPDIR/os-release"
   export FIXPLIZZ_OS_RELEASE_FILE="$BATS_TEST_TMPDIR/os-release"

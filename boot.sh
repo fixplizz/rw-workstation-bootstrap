@@ -76,7 +76,8 @@ cleanup_bootstrap() {
 trap cleanup_bootstrap EXIT
 
 if [[ -n ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
-  git clone --quiet --no-local --branch "$ref" "$FIXPLIZZ_BOOT_SOURCE" "$checkout"
+  git clone --quiet --no-local "$FIXPLIZZ_BOOT_SOURCE" "$checkout"
+  git -C "$checkout" checkout --quiet "$ref"
 else
   git clone --quiet --depth 1 --branch "$ref" "https://github.com/$repo.git" "$checkout"
 fi
