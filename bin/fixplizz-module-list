@@ -1,0 +1,34 @@
+#!/bin/bash
+# fixplizz:group=module
+# fixplizz:name=list
+# fixplizz:summary=List modules in a Fixplizz profile
+# fixplizz:args=[--profile NAME] [--json]
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+source "$ROOT/install/helpers/profile.sh"
+
+profile=mvp
+json=false
+while (($# > 0)); do
+  case "$1" in
+    --profile) shift; profile="${1:-}" ;;
+    --json) json=true ;;
+    *) printf 'Unknown option for fixplizz module list: %s\n' "$1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+fixplizz_profile_exists "$profile" || { printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2; exit 4; }
+mapfile -t modules < <(fixplizz_profile_modules "$profile")
+if [[ $json == true ]]; then
+  python - "$profile" "${modules[@]}" <<'PY'
+import json, sys
+print(json.dumps({"ok": True, "command": "module list", "profile": sys.argv[1], "modules": sys.argv[2:]}, separators=(",", ":")))
+PY
+else
+  printf 'Fixplizz modules for profile %s:\n' "$profile"
+  printf '  %s\n' "${modules[@]}"
+fi

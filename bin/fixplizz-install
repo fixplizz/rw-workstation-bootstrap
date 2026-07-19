@@ -1,0 +1,47 @@
+#!/bin/bash
+# fixplizz:group=install
+# fixplizz:summary=Install a Fixplizz workstation profile
+# fixplizz:args=--profile NAME [--resume] [--noninteractive] [--dry-run]
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$ROOT/install/helpers/fixplizz-env.sh"
+# shellcheck source=install/helpers/profile.sh
+source "$ROOT/install/helpers/profile.sh"
+# shellcheck source=install/helpers/runner.sh
+source "$ROOT/install/helpers/runner.sh"
+# shellcheck source=install/helpers/gate.sh
+source "$ROOT/install/helpers/gate.sh"
+
+profile=""
+resume=false
+dry_run=false
+
+while (($# > 0)); do
+  case "$1" in
+    --profile) shift; profile="${1:-}" ;;
+    --resume) resume=true ;;
+    --noninteractive) export FIXPLIZZ_NONINTERACTIVE=1 ;;
+    --dry-run) dry_run=true; export FIXPLIZZ_DRY_RUN=1 ;;
+    *) printf 'Unknown option for fixplizz install: %s\n' "$1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[[ -n $profile ]] || { printf 'fixplizz install requires --profile NAME\n' >&2; exit 2; }
+fixplizz_profile_exists "$profile" || { printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2; exit 4; }
+
+if [[ $dry_run == true ]]; then
+  fixplizz_print_plan "$profile"
+  exit 0
+fi
+
+if [[ ${FIXPLIZZ_TEST_MODE:-0} != "1" ]]; then
+  fixplizz_require_supported_environment
+fi
+fixplizz_create_user_dirs
+fixplizz_run_profile "$profile" "$resume"
