@@ -2,14 +2,14 @@
 
 # omakub:summary=Allow Chromium to sign in to Google accounts by adding the required OAuth credentials
 
-if [[ -f ~/.config/chromium-flags.conf ]]; then
+if [[ -f ~/.config/chromium-flags.conf && -n ${CHROMIUM_GOOGLE_OAUTH_CLIENT_ID:-} && -n ${CHROMIUM_GOOGLE_OAUTH_CLIENT_SECRET:-} ]]; then
   CONF=~/.config/chromium-flags.conf
 
-  grep -qxF -- "--oauth2-client-id=77185425430.apps.googleusercontent.com" "$CONF" ||
-    echo "--oauth2-client-id=77185425430.apps.googleusercontent.com" >>"$CONF"
+  grep -qxF -- "--oauth2-client-id=$CHROMIUM_GOOGLE_OAUTH_CLIENT_ID" "$CONF" ||
+    printf '%s\n' "--oauth2-client-id=$CHROMIUM_GOOGLE_OAUTH_CLIENT_ID" >>"$CONF"
 
-  grep -qxF -- "--oauth2-client-secret=OTJgUOQcT7lO7GsGZq2G4IlT" "$CONF" ||
-    echo "--oauth2-client-secret=OTJgUOQcT7lO7GsGZq2G4IlT" >>"$CONF"
+  grep -qxF -- "--oauth2-client-secret=$CHROMIUM_GOOGLE_OAUTH_CLIENT_SECRET" "$CONF" ||
+    printf '%s\n' "--oauth2-client-secret=$CHROMIUM_GOOGLE_OAUTH_CLIENT_SECRET" >>"$CONF"
 
   echo "Now you can login to your Google Account in Chromium."
 fi

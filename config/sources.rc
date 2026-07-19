@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+# Pinned, official amd64 release sources for v0.1.0-rc1.
+STARSHIP_VERSION=1.26.0
+STARSHIP_URL=https://github.com/starship/starship/releases/download/v1.26.0/starship-x86_64-unknown-linux-gnu.tar.gz
+STARSHIP_SHA256=321f0dd7af8340a5f2e6a8fec6538a04f617486f9ec70d878f91c09cd8deef22
+
+ZOXIDE_VERSION=0.10.0
+ZOXIDE_URL=https://github.com/ajeetdsouza/zoxide/releases/download/v0.10.0/zoxide-0.10.0-x86_64-unknown-linux-musl.tar.gz
+ZOXIDE_SHA256=2d93385b99f3e82cf2701609a1bffcad863fbeb75aa3fe7eb6be4d29be68b1ae
+
+MISE_VERSION=2026.7.7
+MISE_URL=https://github.com/jdx/mise/releases/download/v2026.7.7/mise-v2026.7.7-linux-x64
+MISE_SHA256=429f71e7e989908bf975aafac9066329c16e2d8fc7cd8e74fdf21dd6300ffe7c
+
+UV_VERSION=0.11.29
+UV_URL=https://github.com/astral-sh/uv/releases/download/0.11.29/uv-x86_64-unknown-linux-gnu.tar.gz
+UV_SHA256=04f8b82f5d47f0512dcd32c67a4a6f16a0ea27c81537c338fd0ad6b23cebe829
+
+KUBECTL_VERSION=1.36.2
+KUBECTL_URL=https://dl.k8s.io/release/v1.36.2/bin/linux/amd64/kubectl
+KUBECTL_SHA256=1e9045ec32bea85da43de85f0065358529ea7c7a152eca78154fba5b58c27d82
+
+HELM_VERSION=4.2.3
+HELM_URL=https://get.helm.sh/helm-v4.2.3-linux-amd64.tar.gz
+HELM_SHA256=e9b88b4ee95b18c706839c28d3a0220e5bc470e9cd9262410c90793c45ff8b7c
+
+K9S_VERSION=0.51.0
+K9S_URL=https://github.com/derailed/k9s/releases/download/v0.51.0/k9s_Linux_amd64.tar.gz
+K9S_SHA256=c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7
+
+TOFU_VERSION=1.12.4
+TOFU_URL=https://github.com/opentofu/opentofu/releases/download/v1.12.4/tofu_1.12.4_linux_amd64.tar.gz
+TOFU_SHA256=81836d0f12b4fe9013b85586349f993def9429b6383bb77cdd6c2f3a9d9aac24
+
+SOPS_VERSION=3.13.2
+SOPS_URL=https://github.com/getsops/sops/releases/download/v3.13.2/sops-v3.13.2.linux.amd64
+SOPS_SHA256=154dfe4cd70554bdd82b98e4cd4acf191d43d01ead6f00a73477aa44c4ac42ef
+
+TRIVY_VERSION=0.72.0
+TRIVY_URL=https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-64bit.tar.gz
+TRIVY_SHA256=bbb64b9695866ce4a7a8f5c9592002c5961cab378577fa3f8a040df362b9b2ea
+
+GITLEAKS_VERSION=8.30.1
+GITLEAKS_URL=https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+HADOLINT_VERSION=2.14.0
+HADOLINT_URL=https://github.com/hadolint/hadolint/releases/download/v2.14.0/hadolint-Linux-x86_64
+HADOLINT_SHA256=6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47
+
+OPENCODE_VERSION=1.18.3
+OPENCODE_URL=https://github.com/anomalyco/opencode/releases/download/v1.18.3/opencode-linux-x64.tar.gz
+OPENCODE_SHA256=60f27b2679f00a511b6539f97e02448afaf58d9c66e2448285ea0c517ca84583
+
+NETBIRD_VERSION=0.74.7
+NETBIRD_URL=https://github.com/netbirdio/netbird/releases/download/v0.74.7/netbird_0.74.7_linux_amd64.tar.gz
+NETBIRD_SHA256=ff46fa7d9e5b07b6ad8fa731be2ac11193cec29dc139702901b00ba5763ca34a
+
+TERMIX_VERSION=2.5.0
+TERMIX_URL=https://github.com/Termix-SSH/Termix/releases/download/release-2.5.0-tag/termix_linux_flatpak.flatpak
+TERMIX_SHA256=afbb553b206941c8b25d07fa8c0389ce92c89279f9d87f43cf574a2ee25fcb89
+
+CODEX_VERSION=0.144.6
+CODEX_INTEGRITY=sha512-wk+2CWiBNXiJLBoN2D08N9RceWkSBnlgk5g2K1a4CXrP/C0gdlHyRUG7RFzm9y41DCK/7tvCct233JVxyFmznw==
+PNPM_VERSION=11.15.0
+
+fixplizz_validate_sources() {
+  local prefix url sha url_key sha_key
+  for prefix in STARSHIP ZOXIDE MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD TERMIX; do
+    url_key="${prefix}_URL"
+    sha_key="${prefix}_SHA256"
+    url="${!url_key}"
+    sha="${!sha_key}"
+    [[ $url == https://* ]] || return 1
+    [[ $url != *latest* ]] || return 1
+    [[ $sha =~ ^[0-9a-f]{64}$ ]] || return 1
+  done
+}

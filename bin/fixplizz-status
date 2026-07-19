@@ -41,7 +41,7 @@ if (($# > 0)); then
 fi
 
 version="$(fixplizz_version)"
-release_stage="development"
+release_stage="release-candidate"
 os_id="$(fixplizz_detect_os)"
 os_version="$(fixplizz_detect_version)"
 arch="$(fixplizz_detect_arch)"
@@ -54,21 +54,41 @@ if [[ -r "$FIXPLIZZ_STATE_HOME/current-run" ]]; then
   last_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
 fi
 
+installation_state="not-installed"
+if [[ $last_run != none && -d "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules" ]]; then
+  installation_state="incomplete"
+  if python - "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules" <<'PY'; then
+import json, pathlib, sys
+files = sorted(pathlib.Path(sys.argv[1]).glob("*.json"))
+raise SystemExit(0 if len(files) == 8 and all(json.loads(p.read_text())["status"] == "completed" for p in files) else 1)
+PY
+    installation_state="completed"
+  fi
+fi
+
 if [[ $json == true ]]; then
-  printf '{"ok":true,"command":"status","status":{'
-  printf '"version":%s,' "$(json_string "$version")"
-  printf '"release_stage":%s,' "$(json_string "$release_stage")"
-  printf '"channel":%s,' "$(json_string "$FIXPLIZZ_CHANNEL")"
-  printf '"repository_path":%s,' "$(json_string "$FIXPLIZZ_ROOT")"
-  printf '"os":%s,' "$(json_string "$os_id")"
-  printf '"os_version":%s,' "$(json_string "$os_version")"
-  printf '"architecture":%s,' "$(json_string "$arch")"
-  printf '"desktop":%s,' "$(json_string "$desktop")"
-  printf '"session":%s,' "$(json_string "$session")"
-  printf '"installation_state":%s,' "$(json_string "pr1-cli-only")"
-  printf '"legacy_installation":%s,' "$(json_string "$legacy")"
-  printf '"last_run":%s' "$(json_string "$last_run")"
-  printf '}}\n'
+  python - "$version" "$release_stage" "$FIXPLIZZ_CHANNEL" "$FIXPLIZZ_ROOT" "$os_id" "$os_version" "$arch" "$desktop" "$session" "$installation_state" "$legacy" "$last_run" "$FIXPLIZZ_STATE_HOME" <<'PY'
+import json, pathlib, sys
+(version, stage, channel, root, os_id, os_version, arch, desktop, session,
+ installation_state, legacy, run_id, state_home) = sys.argv[1:]
+modules = []
+resumed_from = None
+if run_id != "none":
+    run_root = pathlib.Path(state_home) / "runs" / run_id
+    for path in sorted((run_root / "modules").glob("*.json")):
+        data = json.loads(path.read_text())
+        modules.append({"name": data.get("module", path.stem), "status": data.get("status", "unknown")})
+    meta = run_root / "run.json"
+    if meta.exists():
+        resumed_from = json.loads(meta.read_text()).get("resumed_from")
+print(json.dumps({"ok": True, "command": "status", "status": {
+    "version": version, "release_stage": stage, "channel": channel,
+    "repository_path": root, "os": os_id, "os_version": os_version,
+    "architecture": arch, "desktop": desktop, "session": session,
+    "installation_state": installation_state, "legacy_installation": legacy,
+    "last_run": run_id, "resumed_from": resumed_from, "modules": modules,
+}}, separators=(",", ":")))
+PY
   exit 0
 fi
 
@@ -83,7 +103,18 @@ OS: $os_id $os_version
 Architecture: $arch
 Desktop: $desktop
 Session: $session
-Installation state: pr1-cli-only
+Installation state: $installation_state
 Legacy installation: $legacy
 Last run: $last_run
 EOF
+
+if [[ $last_run != none ]]; then
+  for module_file in "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules"/*.json; do
+    [[ -f $module_file ]] || continue
+    python - "$module_file" <<'PY'
+import json, pathlib, sys
+d = json.loads(pathlib.Path(sys.argv[1]).read_text())
+print(f"Module {d.get('module', pathlib.Path(sys.argv[1]).stem)}: {d.get('status', 'unknown')}")
+PY
+  done
+fi

@@ -6,6 +6,13 @@ set -Eeuo pipefail
 source "$FIXPLIZZ_ROOT/install/helpers/packages.sh"
 # shellcheck source=install/helpers/flatpak.sh
 source "$FIXPLIZZ_ROOT/install/helpers/flatpak.sh"
+# shellcheck source=install/helpers/artifacts.sh
+source "$FIXPLIZZ_ROOT/install/helpers/artifacts.sh"
+# shellcheck source=install/helpers/files.sh
+source "$FIXPLIZZ_ROOT/install/helpers/files.sh"
+# shellcheck source=config/sources.rc
+# shellcheck disable=SC1091
+source "$FIXPLIZZ_ROOT/config/sources.rc"
 
 module_plan() {
   local item

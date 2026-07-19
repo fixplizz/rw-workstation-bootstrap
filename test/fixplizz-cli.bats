@@ -23,7 +23,7 @@ json_query() {
 @test "fixplizz version renders version" {
   run "$CLI" version
   [ "$status" -eq 0 ]
-  [ "$output" = "Fixplizz Workstation 0.1.0-dev" ]
+  [ "$output" = "Fixplizz Workstation 0.1.0-rc1" ]
 }
 
 @test "fixplizz commands lists PR1 commands" {
@@ -93,8 +93,8 @@ json_query() {
   python -c 'import json,sys; data=json.load(open(sys.argv[1])); assert data["ok"] is False; assert data["command"] == "doctor"; assert isinstance(data["checks"], list); assert isinstance(data["warnings"], list); assert isinstance(data["errors"], list); assert data["errors"]' "$stdout_file"
 }
 
-@test "status --json reports pr1 cli only state" {
+@test "status --json reports release candidate state" {
   run "$CLI" status --json
   [ "$status" -eq 0 ]
-  printf '%s' "$output" | json_query 'assert data["status"]["installation_state"] == "pr1-cli-only"; assert data["status"]["release_stage"] == "development"; assert data["command"] == "status"'
+  printf '%s' "$output" | json_query 'assert data["status"]["installation_state"] == "not-installed"; assert data["status"]["release_stage"] == "release-candidate"; assert data["command"] == "status"'
 }

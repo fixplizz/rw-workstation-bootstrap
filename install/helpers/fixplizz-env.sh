@@ -13,9 +13,9 @@ fixplizz_repo_root() {
 }
 
 export FIXPLIZZ_BRAND="${FIXPLIZZ_BRAND:-Fixplizz Workstation}"
-export FIXPLIZZ_REPO="${FIXPLIZZ_REPO:-fixplizz/fixplizz-workstation}"
-export FIXPLIZZ_REF="${FIXPLIZZ_REF:-stable}"
-export FIXPLIZZ_CHANNEL="${FIXPLIZZ_CHANNEL:-stable}"
+export FIXPLIZZ_REPO="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
+export FIXPLIZZ_REF="${FIXPLIZZ_REF:-mvp/one-command-workstation}"
+export FIXPLIZZ_CHANNEL="${FIXPLIZZ_CHANNEL:-rc}"
 export FIXPLIZZ_PROFILE="${FIXPLIZZ_PROFILE:-}"
 export FIXPLIZZ_NONINTERACTIVE="${FIXPLIZZ_NONINTERACTIVE:-0}"
 export FIXPLIZZ_DRY_RUN="${FIXPLIZZ_DRY_RUN:-0}"

@@ -2,31 +2,46 @@ name: CI
 
 on:
   push:
-    branches: [main, develop, stable]
+    branches: [main, develop, stable, migration/import-pr1-baseline, mvp/one-command-workstation]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  shell:
-    runs-on: ubuntu-latest
+  lint:
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck shfmt python3
+      - run: shellcheck boot.sh install.sh bin/fixplizz* install/helpers/*.sh modules/*.sh scripts/ci/*.sh scripts/smoke/*.sh test/run.sh
+      - run: shfmt -d -i 2 -ci boot.sh install.sh bin/fixplizz* install/helpers/*.sh modules/*.sh scripts/ci/*.sh scripts/smoke/*.sh test/run.sh
+      - run: scripts/ci/policy-scan.sh
 
-      - name: Install shell tooling
+  unit:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y bats shellcheck shfmt python3
+      - run: bash test/run.sh
+
+  integration-headless:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ubuntu 26.04 gate and non-mutating MVP plan
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bats shellcheck shfmt python3
+          test "$(. /etc/os-release && printf '%s' "$VERSION_ID")" = 26.04
+          FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_OS_RELEASE_FILE=/etc/os-release FIXPLIZZ_TEST_ARCH=x86_64 \
+            bin/fixplizz install --profile mvp --dry-run
+          FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_OS_RELEASE_FILE=/etc/os-release FIXPLIZZ_TEST_ARCH=x86_64 \
+            bin/fixplizz install --profile mvp --noninteractive
+          bin/fixplizz status --json | python3 -m json.tool >/dev/null
 
-      - name: Run validation
-        run: bash test/run.sh
-
-      - name: Secret scan
-        run: |
-          if grep -RInE '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|api[_-]?key|oauth[_-]?token|password=|secret=)' \
-            --exclude-dir=.git \
-            --exclude='*.png' \
-            --exclude='*.jpg' \
-            --exclude='*.jpeg' \
-            .; then
-            echo "Potential secret found" >&2
-            exit 1
-          fi
+  secrets-boundary:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: scripts/ci/secrets-boundary.sh

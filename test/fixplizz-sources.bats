@@ -74,3 +74,32 @@ setup() {
     done
   done
 }
+
+@test "RC source manifest pins HTTPS amd64 artifacts and SHA256 values" {
+  [ -f "$ROOT/config/sources.rc" ]
+  run bash -c "source '$ROOT/config/sources.rc'; fixplizz_validate_sources"
+  [ "$status" -eq 0 ]
+  ! grep -Eqi '(^|[/=-])latest([/._-]|$)|http://' "$ROOT/config/sources.rc"
+}
+
+@test "artifact installer rejects a checksum mismatch before installation" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf 'not trusted\n' >"$fixture"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '0000000000000000000000000000000000000000000000000000000000000000' demo"
+  [ "$status" -ne 0 ]
+  [ ! -e "$FIXPLIZZ_BIN_HOME/demo" ]
+}
+
+@test "artifact installer verifies before copying into user bin" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf '#!/bin/sh\necho demo\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" FIXPLIZZ_TEST_MODE=1 bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  [ -x "$FIXPLIZZ_BIN_HOME/demo" ]
+}
+
+@test "MVP modules keep credential and system safety boundaries" {
+  run grep -RInE 'sudo[[:space:]]+npm|apt-key|flatpak[[:space:]]+install[[:space:]]+(--system[[:space:]]+)?[^-]|systemctl[[:space:]]+enable[[:space:]]+ssh|apparmor.*(disable|stop)|rustdesk.*password|netbird[[:space:]]+up' "$ROOT/modules" "$ROOT/install/helpers"
+  [ "$status" -eq 1 ]
+}

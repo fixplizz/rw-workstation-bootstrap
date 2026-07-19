@@ -34,6 +34,7 @@ PR1_SHELL_FILES=(
 MVP_SHELL_FILES=(
   bin/fixplizz-install
   bin/fixplizz-module-list
+  install/helpers/artifacts.sh
   install/helpers/checksum.sh
   install/helpers/files.sh
   install/helpers/flatpak.sh
@@ -51,6 +52,9 @@ MVP_SHELL_FILES=(
   modules/devops-base.sh
   modules/remote-base.sh
   modules/terminal.sh
+  scripts/ci/policy-scan.sh
+  scripts/ci/secrets-boundary.sh
+  scripts/smoke/native-ubuntu-26.04.sh
 )
 
 SHELL_FILES=("${PR1_SHELL_FILES[@]}" "${MVP_SHELL_FILES[@]}")
@@ -73,8 +77,13 @@ PR1_TEXT_FILES=(
 MVP_TEXT_FILES=(
   "${MVP_SHELL_FILES[@]}"
   profiles/mvp
+  config/sources.rc
   test/fixplizz-mvp.bats
+  test/fixplizz-json.bats
+  test/fixplizz-policy.bats
   test/fixplizz-sources.bats
+  docs/native-smoke-test.md
+  docs/native-smoke-report-template.md
 )
 
 TEXT_FILES=("${PR1_TEXT_FILES[@]}" "${MVP_TEXT_FILES[@]}")
@@ -115,6 +124,7 @@ for file in \
   install/helpers/gate.sh \
   bin/fixplizz-install \
   bin/fixplizz-module-list \
+  install/helpers/artifacts.sh \
   install/helpers/checksum.sh \
   install/helpers/files.sh \
   install/helpers/flatpak.sh \
@@ -132,6 +142,9 @@ for file in \
   modules/devops-base.sh \
   modules/remote-base.sh \
   modules/terminal.sh \
+  scripts/ci/policy-scan.sh \
+  scripts/ci/secrets-boundary.sh \
+  scripts/smoke/native-ubuntu-26.04.sh \
   test/run.sh; do
   mode="$(git ls-files -s "$file" | awk '{print $1}')"
   if [[ "$mode" != "100755" ]]; then

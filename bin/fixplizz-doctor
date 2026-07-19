@@ -87,7 +87,7 @@ else
   add_check "session" "WARN" "Wayland not detected: $session"
 fi
 
-for required in apt git curl jq gum; do
+for required in git curl jq gum; do
   if fixplizz_has_command "$required"; then
     add_check "$required" "OK" "$required is available"
   else
@@ -95,22 +95,87 @@ for required in apt git curl jq gum; do
   fi
 done
 
-if mkdir -p "$FIXPLIZZ_STATE_HOME" "$FIXPLIZZ_CONFIG_HOME" "$FIXPLIZZ_CACHE_HOME" 2>/dev/null; then
-  add_check "runtime-directories" "OK" "User runtime directories are available"
+if command -v sudo >/dev/null 2>&1; then
+  add_check "sudo" "OK" "sudo is available"
 else
-  add_check "runtime-directories" "FAIL" "Cannot create user runtime directories"
+  add_check "sudo" "WARN" "sudo is not available"
 fi
 
-if [[ -w "$FIXPLIZZ_STATE_HOME" ]]; then
-  add_check "write-permissions" "OK" "State directory is writable"
+if df -Pk "$HOME" 2>/dev/null | awk 'NR==2 { exit !($4 >= 5242880) }'; then
+  add_check "disk" "OK" "At least 5 GiB is available"
 else
-  add_check "write-permissions" "FAIL" "State directory is not writable"
+  add_check "disk" "WARN" "Less than 5 GiB may be available"
 fi
 
 if fixplizz_has_command getent && getent hosts github.com >/dev/null 2>&1; then
-  add_check "network" "OK" "github.com resolves"
+  add_check "dns" "OK" "github.com resolves"
 else
-  add_check "network" "SKIP" "Network check skipped or unavailable"
+  add_check "dns" "SKIP" "DNS check skipped or unavailable"
+fi
+
+if [[ :$PATH: == *":$HOME/.local/bin:"* ]]; then
+  add_check "path" "OK" "User binary directory is on PATH"
+else
+  add_check "path" "WARN" "$HOME/.local/bin is not on PATH"
+fi
+
+if [[ -r "$ROOT/profiles/mvp" ]]; then
+  add_check "checkout" "OK" "MVP checkout is readable"
+else
+  add_check "checkout" "FAIL" "MVP checkout is incomplete"
+fi
+if [[ -r "$FIXPLIZZ_STATE_HOME/current-run" ]]; then
+  add_check "state" "OK" "Run state is present"
+else
+  add_check "state" "SKIP" "No installation run is recorded"
+fi
+if fixplizz_has_command apt; then
+  add_check "apt" "OK" "APT is available"
+elif [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 ]]; then
+  add_check "apt" "SKIP" "APT is outside the mocked test host"
+else
+  add_check "apt" "FAIL" "APT is unavailable"
+fi
+if fixplizz_has_command flatpak; then
+  add_check "flatpak" "OK" "Flatpak is available"
+else
+  add_check "flatpak" "WARN" "Flatpak is not installed yet"
+fi
+if fixplizz_has_command docker; then
+  add_check "docker" "OK" "Docker CLI is available"
+else
+  add_check "docker" "WARN" "Docker CLI is not installed yet"
+fi
+
+missing_apps=0
+for required_app in starship zoxide mise uv kubectl helm tofu sops codex opencode netbird; do
+  fixplizz_has_command "$required_app" || missing_apps=$((missing_apps + 1))
+done
+if ((missing_apps == 0)); then
+  add_check "applications" "OK" "Required CLI applications are available"
+else
+  add_check "applications" "WARN" "$missing_apps required CLI applications are not installed yet"
+fi
+
+if [[ -e "$FIXPLIZZ_STATE_HOME/logout-required" ]]; then
+  add_check "logout" "WARN" "Logout is required for group membership"
+else
+  add_check "logout" "SKIP" "No logout requirement is recorded"
+fi
+if [[ -e "$FIXPLIZZ_STATE_HOME/reboot-required" || -e /var/run/reboot-required ]]; then
+  add_check "reboot" "WARN" "A reboot is required"
+else
+  add_check "reboot" "SKIP" "No reboot requirement is recorded"
+fi
+
+if [[ -d $FIXPLIZZ_STATE_HOME ]]; then
+  if [[ -w $FIXPLIZZ_STATE_HOME ]]; then
+    add_check "runtime-directories" "OK" "State directory is writable"
+  else
+    add_check "runtime-directories" "FAIL" "State directory is not writable"
+  fi
+else
+  add_check "runtime-directories" "SKIP" "Runtime directories will be created by install"
 fi
 
 if [[ "$legacy" == "none" ]]; then

@@ -1,83 +1,43 @@
-# Fixplizz Workstation
+# Fixplizz Workstation v0.1.0-rc1
 
-Fixplizz Workstation is an early Bash-first workstation bootstrap project for Ubuntu 26.04 LTS on x86_64.
-
-This repository is currently at PR 1 scope: fork baseline, public rebranding, Ubuntu 26.04 environment gate, CLI skeleton, diagnostics, tests, and attribution. It is not a production-ready workstation installer yet.
-
-Current acceptance status:
-
-```text
-PR 1: implementation complete locally
-Acceptance: pending Linux and GitHub Actions validation
-```
-
-## Status
-
-- Target OS: Ubuntu 26.04 LTS only.
-- Target architecture: x86_64 / amd64 only.
-- Public CLI: `fixplizz`.
-- Primary code upstream: `omakasui/omabuntu`.
-- Architectural origin: `basecamp/omakub`.
-- Destructive installation flow is disabled in the default PR 1 path.
-- Release stage: development.
-
-PR 1 does not install the full application stack, configure GNOME, connect private configuration, mount Google Drive, or migrate existing Omabuntu/Omakub installations.
-
-## Supported PR 1 Commands
+Fixplizz Workstation provisions an opinionated developer workstation on Ubuntu 26.04 LTS amd64. The release candidate installs the public `mvp` profile with one command:
 
 ```bash
-fixplizz
-fixplizz help
-fixplizz version
-fixplizz commands
-fixplizz commands --json
-fixplizz commands --check
+curl -fsSL https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc1/boot.sh | bash -s -- --noninteractive
+```
+
+Review [`boot.sh`](boot.sh) before running it. This command installs packages and user applications, changes guarded GNOME settings, and may add the current user to the `docker` group. It does not remove Snap, run a distribution upgrade, enable an SSH server, alter AppArmor, create credentials, log into applications, or load private Fixplizz configuration.
+
+## Supported system
+
+- Ubuntu 26.04 LTS only
+- x86_64/amd64 only
+- GNOME on Wayland is recommended; headless diagnostics remain supported
+
+The ordered profile is `core`, `desktop`, `terminal`, `developer`, `devops-base`, `ai-base`, `daily-base`, and `remote-base`. Vendor artifacts are pinned to HTTPS URLs and verified before installation. Flatpak is always user-scoped.
+
+## Plan, install, resume
+
+```bash
+fixplizz install --profile mvp --dry-run
+fixplizz install --profile mvp --noninteractive
+fixplizz install --profile mvp --resume --noninteractive
 fixplizz doctor
 fixplizz doctor --json
 fixplizz status
 fixplizz status --json
 ```
 
-## Runtime Paths
+State and logs are stored below `~/.local/state/fixplizz`; the current run ID is in `current-run`, and the full install log is below `runs/<run-id>/install.log`. Managed configuration uses `~/.config/fixplizz`, downloads use `~/.cache/fixplizz`, and the checkout uses `~/.local/share/fixplizz`. Existing conflicting files are backed up before replacement.
 
-```text
-~/.local/share/fixplizz
-~/.local/state/fixplizz
-~/.config/fixplizz
-~/.cache/fixplizz
-~/.local/bin/fixplizz
-/var/log/fixplizz
-/var/lib/fixplizz
-```
+Authentication for Codex, OpenCode, NetBird, RustDesk and Termix is deliberately manual. No credentials, SOPS payloads, private dotfiles or personal profiles are part of this repository.
 
-## Safety Policy
+## Release status
 
-The PR 1 default path does not:
+Automated CI covers lint, unit tests, headless integration and the public/private secrets boundary. See [the native smoke procedure](docs/native-smoke-test.md) and [report template](docs/native-smoke-report-template.md).
 
-- run full `apt upgrade`;
-- remove or block Snap;
-- install TLP;
-- connect Omabuntu/Omakasui package repositories;
-- change GDM or Plymouth;
-- change GNOME settings;
-- modify firewall or SSH server state;
-- overwrite user dotfiles;
-- migrate legacy Omabuntu/Omakub installations.
+`v0.1.0 remains blocked` until a real native Ubuntu 26.04 Desktop amd64 smoke report passes. The `v0.1.0-rc1` tag is a prerelease, not stable acceptance.
 
-## Bootstrap Status
+## Development and attribution
 
-`boot.sh` is intentionally limited in PR 1. It checks the Ubuntu 26.04 x86_64 hard gate, creates Fixplizz user directories, installs the `~/.local/bin/fixplizz` symlink, and prints the next diagnostic command.
-
-Do not publish `curl | bash` installation instructions for PR 1. The full public bootstrap flow will be designed in a later PR.
-
-## Development
-
-See [docs/development.md](docs/development.md).
-
-## Architecture
-
-See [docs/architecture.md](docs/architecture.md).
-
-## Upstream And License
-
-See [docs/upstream.md](docs/upstream.md), [NOTICE.md](NOTICE.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and [LICENSE](LICENSE).
+See [development](docs/development.md), [architecture](docs/architecture.md), [upstream attribution](docs/upstream.md), [NOTICE](NOTICE.md), [third-party notices](THIRD_PARTY_NOTICES.md), and [LICENSE](LICENSE).
