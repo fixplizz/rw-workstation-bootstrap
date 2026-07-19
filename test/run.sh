@@ -31,6 +31,30 @@ PR1_SHELL_FILES=(
   test/run.sh
 )
 
+MVP_SHELL_FILES=(
+  bin/fixplizz-install
+  bin/fixplizz-module-list
+  install/helpers/checksum.sh
+  install/helpers/files.sh
+  install/helpers/flatpak.sh
+  install/helpers/module.sh
+  install/helpers/packages.sh
+  install/helpers/profile.sh
+  install/helpers/repositories.sh
+  install/helpers/runner.sh
+  install/helpers/state.sh
+  modules/ai-base.sh
+  modules/core.sh
+  modules/daily-base.sh
+  modules/desktop.sh
+  modules/developer.sh
+  modules/devops-base.sh
+  modules/remote-base.sh
+  modules/terminal.sh
+)
+
+SHELL_FILES=("${PR1_SHELL_FILES[@]}" "${MVP_SHELL_FILES[@]}")
+
 PR1_TEXT_FILES=(
   "${PR1_SHELL_FILES[@]}"
   test/fixplizz-cli.bats
@@ -46,13 +70,22 @@ PR1_TEXT_FILES=(
   THIRD_PARTY_NOTICES.md
 )
 
+MVP_TEXT_FILES=(
+  "${MVP_SHELL_FILES[@]}"
+  profiles/mvp
+  test/fixplizz-mvp.bats
+  test/fixplizz-sources.bats
+)
+
+TEXT_FILES=("${PR1_TEXT_FILES[@]}" "${MVP_TEXT_FILES[@]}")
+
 printf '== bash -n ==\n'
-for file in "${PR1_SHELL_FILES[@]}"; do
+for file in "${SHELL_FILES[@]}"; do
   bash -n "$file"
 done
 
 printf '== line endings and bom ==\n'
-for file in "${PR1_TEXT_FILES[@]}"; do
+for file in "${TEXT_FILES[@]}"; do
   if grep -q $'\r' "$file"; then
     printf 'CRLF detected: %s\n' "$file" >&2
     exit 1
@@ -80,6 +113,25 @@ for file in \
   install/helpers/fixplizz-env.sh \
   install/helpers/detection.sh \
   install/helpers/gate.sh \
+  bin/fixplizz-install \
+  bin/fixplizz-module-list \
+  install/helpers/checksum.sh \
+  install/helpers/files.sh \
+  install/helpers/flatpak.sh \
+  install/helpers/module.sh \
+  install/helpers/packages.sh \
+  install/helpers/profile.sh \
+  install/helpers/repositories.sh \
+  install/helpers/runner.sh \
+  install/helpers/state.sh \
+  modules/ai-base.sh \
+  modules/core.sh \
+  modules/daily-base.sh \
+  modules/desktop.sh \
+  modules/developer.sh \
+  modules/devops-base.sh \
+  modules/remote-base.sh \
+  modules/terminal.sh \
   test/run.sh; do
   mode="$(git ls-files -s "$file" | awk '{print $1}')"
   if [[ "$mode" != "100755" ]]; then
@@ -90,14 +142,14 @@ done
 
 if command -v shellcheck >/dev/null 2>&1; then
   printf '== shellcheck ==\n'
-  shellcheck "${PR1_SHELL_FILES[@]}"
+  shellcheck "${SHELL_FILES[@]}"
 else
   printf '== shellcheck skipped: not installed ==\n'
 fi
 
 if command -v shfmt >/dev/null 2>&1; then
   printf '== shfmt --check ==\n'
-  shfmt -d -i 2 -ci "${PR1_SHELL_FILES[@]}"
+  shfmt -d -i 2 -ci "${SHELL_FILES[@]}"
 else
   printf '== shfmt skipped: not installed ==\n'
 fi

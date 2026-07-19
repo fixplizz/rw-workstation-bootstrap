@@ -1,6 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd); export FIXPLIZZ_ROOT="$ROOT"
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
 MODULE_NAME=devops-base
 APT_PACKAGES=(ansible age)
 FLATPAK_APPS=()

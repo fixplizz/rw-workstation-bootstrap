@@ -23,17 +23,32 @@ dry_run=false
 
 while (($# > 0)); do
   case "$1" in
-    --profile) shift; profile="${1:-}" ;;
+    --profile)
+      shift
+      profile="${1:-}"
+      ;;
     --resume) resume=true ;;
     --noninteractive) export FIXPLIZZ_NONINTERACTIVE=1 ;;
-    --dry-run) dry_run=true; export FIXPLIZZ_DRY_RUN=1 ;;
-    *) printf 'Unknown option for fixplizz install: %s\n' "$1" >&2; exit 2 ;;
+    --dry-run)
+      dry_run=true
+      export FIXPLIZZ_DRY_RUN=1
+      ;;
+    *)
+      printf 'Unknown option for fixplizz install: %s\n' "$1" >&2
+      exit 2
+      ;;
   esac
   shift
 done
 
-[[ -n $profile ]] || { printf 'fixplizz install requires --profile NAME\n' >&2; exit 2; }
-fixplizz_profile_exists "$profile" || { printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2; exit 4; }
+[[ -n $profile ]] || {
+  printf 'fixplizz install requires --profile NAME\n' >&2
+  exit 2
+}
+fixplizz_profile_exists "$profile" || {
+  printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2
+  exit 4
+}
 
 if [[ $dry_run == true ]]; then
   fixplizz_print_plan "$profile"

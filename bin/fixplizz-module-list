@@ -14,14 +14,23 @@ profile=mvp
 json=false
 while (($# > 0)); do
   case "$1" in
-    --profile) shift; profile="${1:-}" ;;
+    --profile)
+      shift
+      profile="${1:-}"
+      ;;
     --json) json=true ;;
-    *) printf 'Unknown option for fixplizz module list: %s\n' "$1" >&2; exit 2 ;;
+    *)
+      printf 'Unknown option for fixplizz module list: %s\n' "$1" >&2
+      exit 2
+      ;;
   esac
   shift
 done
 
-fixplizz_profile_exists "$profile" || { printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2; exit 4; }
+fixplizz_profile_exists "$profile" || {
+  printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2
+  exit 4
+}
 mapfile -t modules < <(fixplizz_profile_modules "$profile")
 if [[ $json == true ]]; then
   python - "$profile" "${modules[@]}" <<'PY'

@@ -49,5 +49,8 @@ case "${1:-}" in
   check) module_check ;;
   apply) module_apply ;;
   verify) module_verify ;;
-  *) printf 'Usage: %s {plan|check|apply|verify}\n' "$0" >&2; exit 2 ;;
+  *)
+    printf 'Usage: %s {plan|check|apply|verify}\n' "$0" >&2
+    exit 2
+    ;;
 esac

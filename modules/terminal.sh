@@ -1,6 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd); export FIXPLIZZ_ROOT="$ROOT"
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
 MODULE_NAME=terminal
 APT_PACKAGES=(alacritty tmux fzf btop)
 FLATPAK_APPS=()

@@ -55,16 +55,16 @@ catch_errors() {
       --header "What would you like to do?" --height 6) || choice=""
 
     case "$choice" in
-    "Retry installation")
-      printf "\033[H\033[2J"
-      exec bash ${OMAKUB_RETRY_CMD:-~/.local/share/omakub/install.sh}
-      ;;
-    "View full log")
-      less "$OMAKUB_INSTALL_LOG_FILE" 2>/dev/null || tail -50 "$OMAKUB_INSTALL_LOG_FILE"
-      ;;
-    *)
-      exit 1
-      ;;
+      "Retry installation")
+        printf "\033[H\033[2J"
+        exec bash ${OMAKUB_RETRY_CMD:-~/.local/share/omakub/install.sh}
+        ;;
+      "View full log")
+        less "$OMAKUB_INSTALL_LOG_FILE" 2>/dev/null || tail -50 "$OMAKUB_INSTALL_LOG_FILE"
+        ;;
+      *)
+        exit 1
+        ;;
     esac
   done
 }
@@ -73,7 +73,7 @@ catch_errors() {
 exit_handler() {
   local exit_code=$?
 
-  if (( exit_code != 0 )) && [[ $ERROR_HANDLING != true ]]; then
+  if ((exit_code != 0)) && [[ $ERROR_HANDLING != true ]]; then
     catch_errors
   fi
 }

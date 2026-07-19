@@ -1,6 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd); export FIXPLIZZ_ROOT="$ROOT"
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
 MODULE_NAME=core
 APT_PACKAGES=(git curl wget ca-certificates gnupg jq yq rsync unzip zip build-essential ripgrep fd-find fzf bat btop tmux direnv shellcheck shfmt flatpak ufw openssh-client wl-clipboard)
 FLATPAK_APPS=()
