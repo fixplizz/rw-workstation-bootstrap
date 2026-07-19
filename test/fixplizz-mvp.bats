@@ -21,6 +21,26 @@ json_query() {
   printf '%s' "$output" | json_query 'assert data["ok"] is True; assert data["modules"] == ["core", "desktop", "terminal", "developer", "devops-base", "ai-base", "daily-base", "remote-base"]'
 }
 
+@test "install defaults to the mvp profile and noninteractive mode" {
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"FIXPLIZZ INSTALLATION SUCCESS"* ]]
+  [[ "$output" == *"Completed modules:"* ]]
+  [[ "$output" == *"core"* ]]
+  [[ "$output" == *"remote-base"* ]]
+  [[ "$output" == *"Logout required:"* ]]
+  [[ "$output" == *"Reboot required:"* ]]
+  [[ "$output" == *"Full log:"* ]]
+  run_id="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+  python - "$FIXPLIZZ_STATE_HOME/runs/$run_id/run.json" <<'PY'
+import json, pathlib, sys
+assert json.loads(pathlib.Path(sys.argv[1]).read_text())["profile"] == "mvp"
+PY
+  [ "$status" -eq 0 ]
+  run bash -c "source '$ROOT/install/helpers/fixplizz-env.sh'; printf '%s:%s\n' \"\$FIXPLIZZ_PROFILE\" \"\$FIXPLIZZ_NONINTERACTIVE\""
+  [ "$output" = "mvp:1" ]
+}
+
 @test "install rejects an unknown profile" {
   run "$CLI" install --profile missing --dry-run
   [ "$status" -eq 4 ]
@@ -43,6 +63,11 @@ json_query() {
   run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_TEST_FAIL_MODULE=terminal \
     "$CLI" install --profile mvp --noninteractive
   [ "$status" -ne 0 ]
+  [[ "$output" == *"FIXPLIZZ INSTALLATION FAILED"* ]]
+  [[ "$output" == *"Module: terminal"* ]]
+  [[ "$output" == *"Exit code: 1"* ]]
+  [[ "$output" == *"Full log:"* ]]
+  [[ "$output" == *"Continue: fixplizz resume"* ]]
 
   run_id="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
   python - "$FIXPLIZZ_STATE_HOME/runs/$run_id" <<'PY'
@@ -52,6 +77,22 @@ assert json.loads((run / "modules/core.json").read_text())["status"] == "complet
 assert json.loads((run / "modules/desktop.json").read_text())["status"] == "completed"
 assert json.loads((run / "modules/terminal.json").read_text())["status"] == "failed"
 assert not (run / "modules/developer.json").exists()
+PY
+}
+
+@test "fixplizz resume continues the last mvp run noninteractively" {
+  run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_TEST_FAIL_MODULE=terminal "$CLI" install
+  [ "$status" -ne 0 ]
+  failed_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" resume
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"FIXPLIZZ INSTALLATION SUCCESS"* ]]
+  resumed_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+  [ "$resumed_run" != "$failed_run" ]
+  python - "$FIXPLIZZ_STATE_HOME/runs/$resumed_run/run.json" "$failed_run" <<'PY'
+import json, pathlib, sys
+assert json.loads(pathlib.Path(sys.argv[1]).read_text())["resumed_from"] == sys.argv[2]
 PY
 }
 

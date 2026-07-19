@@ -2,6 +2,29 @@
 
 set -Eeuo pipefail
 
+bootstrap_state_home="${FIXPLIZZ_STATE_HOME:-$HOME/.local/state/fixplizz}"
+mkdir -p "$bootstrap_state_home"
+export FIXPLIZZ_FULL_LOG="${FIXPLIZZ_FULL_LOG:-$bootstrap_state_home/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-$$.log}"
+exec > >(tee -a "$FIXPLIZZ_FULL_LOG") 2>&1
+
+fixplizz_bootstrap_failure() {
+  local trapped_status=$?
+  local status="${1:-$trapped_status}"
+  trap - ERR
+  printf '\n============================================================\n'
+  printf 'FIXPLIZZ BOOTSTRAP FAILED\n'
+  printf 'Stage: bootstrap\n'
+  printf 'Exit code: %s\n' "$status"
+  printf 'Full log: %s\n' "$FIXPLIZZ_FULL_LOG"
+  printf 'Continue: curl -fsSL https://raw.githubusercontent.com/%s/%s/boot.sh | bash -s -- --noninteractive\n' \
+    "${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}" "${FIXPLIZZ_REF:-v0.1.0-rc3}"
+  printf '============================================================\n'
+  exit "$status"
+}
+trap fixplizz_bootstrap_failure ERR
+
+printf 'Fixplizz bootstrap started. Full log: %s\n' "$FIXPLIZZ_FULL_LOG"
+
 ROOT=''
 if [[ -n ${BASH_SOURCE[0]:-} ]]; then
   ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -56,15 +79,16 @@ fixplizz_require_supported_environment
 for prerequisite in git curl mktemp; do
   command -v "$prerequisite" >/dev/null 2>&1 || {
     printf 'Missing bootstrap prerequisite: %s\n' "$prerequisite" >&2
-    exit 5
+    fixplizz_bootstrap_failure 5
   }
 done
 
 if [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 && -z ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
   [[ -n $ROOT ]] || {
     printf 'FIXPLIZZ_BOOT_SOURCE is required for stdin bootstrap test mode.\n' >&2
-    exit 5
+    fixplizz_bootstrap_failure 5
   }
+  trap - ERR
   exec "$ROOT/install.sh" "$@"
 fi
 
@@ -97,7 +121,7 @@ fi
 
 if ! mv -- "$checkout" "$target"; then
   [[ -n $backup && -e $backup ]] && mv -- "$backup" "$target"
-  exit 6
+  fixplizz_bootstrap_failure 6
 fi
 
 if [[ -e "$bin_home/fixplizz" || -L "$bin_home/fixplizz" ]]; then
@@ -107,4 +131,5 @@ ln -s -- "$target/bin/fixplizz" "$bin_home/fixplizz"
 
 trap - EXIT
 cleanup_bootstrap
-exec "$target/bin/fixplizz" install --profile "${FIXPLIZZ_PROFILE:-mvp}" "$@"
+trap - ERR
+exec "$target/bin/fixplizz" install --profile "${FIXPLIZZ_PROFILE:-mvp}" --noninteractive "$@"

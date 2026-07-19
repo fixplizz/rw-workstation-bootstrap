@@ -36,9 +36,58 @@ fixplizz_print_plan() {
   done < <(fixplizz_profile_modules "$profile")
 }
 
+fixplizz_full_log_path() {
+  local run_log="$1"
+  printf '%s\n' "${FIXPLIZZ_FULL_LOG:-$run_log}"
+}
+
+fixplizz_print_failure_summary() {
+  local module="$1" status="$2" run_log="$3"
+  local full_log
+  full_log="$(fixplizz_full_log_path "$run_log")"
+  {
+    printf '\n============================================================\n'
+    printf 'FIXPLIZZ INSTALLATION FAILED\n'
+    printf 'Module: %s\n' "$module"
+    printf 'Exit code: %s\n' "$status"
+    printf 'Full log: %s\n' "$full_log"
+    printf 'Continue: fixplizz resume\n'
+    printf '============================================================\n'
+  } | tee -a "$run_log" >&2
+}
+
+fixplizz_print_success_summary() {
+  local profile="$1" run_log="$2" module
+  local logout_required=no reboot_required=no full_log
+  [[ -e "$FIXPLIZZ_STATE_HOME/logout-required" ]] && logout_required=yes
+  [[ -e "$FIXPLIZZ_STATE_HOME/reboot-required" || -e /var/run/reboot-required ]] && reboot_required=yes
+  full_log="$(fixplizz_full_log_path "$run_log")"
+  {
+    printf '\n============================================================\n'
+    printf 'FIXPLIZZ INSTALLATION SUCCESS\n'
+    printf 'Completed modules:\n'
+    while IFS= read -r module; do
+      printf '  - %s\n' "$module"
+    done < <(fixplizz_profile_modules "$profile")
+    printf 'Logout required: %s\n' "$logout_required"
+    printf 'Reboot required: %s\n' "$reboot_required"
+    printf 'Full log: %s\n' "$full_log"
+    printf '============================================================\n'
+  } | tee -a "$run_log"
+}
+
+fixplizz_run_module_phase_logged() {
+  local module="$1" phase="$2" log_file="$3" command_status
+  set +e
+  fixplizz_module_command "$module" "$phase" 2>&1 | tee -a "$log_file"
+  command_status=${PIPESTATUS[0]}
+  set -e
+  return "$command_status"
+}
+
 fixplizz_run_profile() {
   local profile="$1" resume="$2"
-  local source_run="" run_id module prior_status log_file
+  local source_run="" run_id module prior_status log_file module_status
 
   if [[ $resume == "true" ]]; then
     [[ -r $FIXPLIZZ_STATE_HOME/current-run ]] || {
@@ -67,18 +116,24 @@ fixplizz_run_profile() {
     if fixplizz_should_inject_failure "$module"; then
       fixplizz_write_module_state "$run_id" "$module" failed false "test failure injection"
       fixplizz_finish_run "$run_id" failed
-      printf 'Module failed: %s; log: %s; resume: fixplizz install --profile %s --resume\n' "$module" "$log_file" "$profile" >&2
+      fixplizz_print_failure_summary "$module" 1 "$log_file"
       return 1
     fi
 
-    if ! fixplizz_module_command "$module" apply >>"$log_file" 2>&1 || ! fixplizz_module_command "$module" verify >>"$log_file" 2>&1; then
+    module_status=0
+    fixplizz_run_module_phase_logged "$module" apply "$log_file" || module_status=$?
+    if ((module_status == 0)); then
+      fixplizz_run_module_phase_logged "$module" verify "$log_file" || module_status=$?
+    fi
+    if ((module_status != 0)); then
       fixplizz_write_module_state "$run_id" "$module" failed false "apply or verify failed"
       fixplizz_finish_run "$run_id" failed
-      printf 'Module failed: %s; log: %s; resume: fixplizz install --profile %s --resume\n' "$module" "$log_file" "$profile" >&2
-      return 1
+      fixplizz_print_failure_summary "$module" "$module_status" "$log_file"
+      return "$module_status"
     fi
     fixplizz_write_module_state "$run_id" "$module" completed false
   done < <(fixplizz_profile_modules "$profile")
 
   fixplizz_finish_run "$run_id" completed
+  fixplizz_print_success_summary "$profile" "$log_file"
 }

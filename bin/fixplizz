@@ -221,9 +221,7 @@ Common commands:
   fixplizz commands      List available commands
   fixplizz doctor        Run PR 1 diagnostics
   fixplizz status        Show detected workstation state
-
-PR 1 status:
-  Full workstation installation is disabled by default.
+  fixplizz resume        Continue an interrupted installation
 EOF
 }
 

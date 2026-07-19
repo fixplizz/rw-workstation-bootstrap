@@ -1,7 +1,7 @@
 #!/bin/bash
 # fixplizz:group=install
 # fixplizz:summary=Install a Fixplizz workstation profile
-# fixplizz:args=--profile NAME [--resume] [--noninteractive] [--dry-run]
+# fixplizz:args=[--profile NAME] [--resume] [--noninteractive] [--dry-run]
 
 set -Eeuo pipefail
 
@@ -17,7 +17,7 @@ source "$ROOT/install/helpers/runner.sh"
 # shellcheck source=install/helpers/gate.sh
 source "$ROOT/install/helpers/gate.sh"
 
-profile=""
+profile="$FIXPLIZZ_PROFILE"
 resume=false
 dry_run=false
 
@@ -41,10 +41,6 @@ while (($# > 0)); do
   shift
 done
 
-[[ -n $profile ]] || {
-  printf 'fixplizz install requires --profile NAME\n' >&2
-  exit 2
-}
 fixplizz_profile_exists "$profile" || {
   printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2
   exit 4

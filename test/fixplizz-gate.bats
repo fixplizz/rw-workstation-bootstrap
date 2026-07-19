@@ -115,7 +115,7 @@ run_gate() {
   [ ! -e "$HOME/.config/fixplizz" ]
 }
 
-@test "boot hard gate fails before symlink or runtime changes" {
+@test "boot hard gate logs a large actionable failure before system changes" {
   write_os_release debian 13
   run env \
     HOME="$HOME" \
@@ -126,7 +126,15 @@ run_gate() {
   [ "$status" -eq 3 ]
   [ ! -e "$HOME/.local/bin/fixplizz" ]
   [ ! -e "$HOME/.local/share/fixplizz" ]
-  [ ! -e "$HOME/.local/state/fixplizz" ]
+  [ -d "$HOME/.local/state/fixplizz" ]
+  bootstrap_log="$(find "$HOME/.local/state/fixplizz" -maxdepth 1 -name 'bootstrap-*.log' -print -quit)"
+  [ -s "$bootstrap_log" ]
+  [[ "$output" == *"FIXPLIZZ BOOTSTRAP FAILED"* ]]
+  [[ "$output" == *"Stage: bootstrap"* ]]
+  [[ "$output" == *"Exit code: 3"* ]]
+  [[ "$output" == *"Full log: $bootstrap_log"* ]]
+  [[ "$output" == *"Continue: curl -fsSL https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc3/boot.sh | bash -s -- --noninteractive"* ]]
+  grep -Fq 'Fixplizz Workstation supports Ubuntu only' "$bootstrap_log"
 }
 
 @test "default PR1 path does not call destructive inherited policies" {

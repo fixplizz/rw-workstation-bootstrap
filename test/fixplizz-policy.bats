@@ -22,7 +22,8 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
 }
 
 @test "README leads with RC install and blocks stable release" {
-  grep -Fq 'v0.1.0-rc3' "$ROOT/README.md"
+  first_command="$(awk '/^```bash$/ {getline; print; exit}' "$ROOT/README.md")"
+  [ "$first_command" = "curl -fsSL https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc3/boot.sh | bash -s -- --noninteractive" ]
   grep -Fq 'v0.1.0 remains blocked' "$ROOT/README.md"
   [ -f "$ROOT/docs/native-smoke-test.md" ]
   [ -f "$ROOT/docs/native-smoke-report-template.md" ]

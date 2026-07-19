@@ -31,6 +31,7 @@ json_query() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"fixplizz doctor"* ]]
   [[ "$output" == *"fixplizz status"* ]]
+  [[ "$output" == *"fixplizz resume"* ]]
   [[ "$output" != *"omakub"* ]]
 }
 
