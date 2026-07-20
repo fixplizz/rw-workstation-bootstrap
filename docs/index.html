@@ -3,25 +3,245 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One-command Ubuntu 26.04 workstation bootstrap for development, DevOps, AI, daily apps, and remote access.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%236558d8'/%3E%3Cpath d='M18 12h32v10H29v9h18v10H29v15H18z' fill='white'/%3E%3C/svg%3E">
   <title>Fixplizz Workstation</title>
   <style>
-    body { max-width: 52rem; margin: 4rem auto; padding: 0 1.25rem; font: 18px/1.6 system-ui, sans-serif; color: #172033; }
-    code { font-family: ui-monospace, monospace; }
-    pre { overflow-x: auto; padding: 1rem; border-radius: .5rem; background: #f2f4f8; }
-    .status { color: #715500; font-weight: 700; }
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fc;
+      --panel: rgba(255, 255, 255, .82);
+      --panel-strong: #fff;
+      --text: #141725;
+      --muted: #5e6475;
+      --line: #dfe3ed;
+      --accent: #6558d8;
+      --accent-strong: #5144c4;
+      --accent-soft: #ece9ff;
+      --code: #181a24;
+      --code-text: #f6f7fb;
+      --shadow: 0 24px 70px rgba(31, 35, 56, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(101, 88, 216, .15), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; }
+    button, code { font: inherit; }
+    .shell { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 0;
+    }
+
+    .brand { font-weight: 800; letter-spacing: -.03em; text-decoration: none; }
+    nav { display: flex; gap: 1rem; color: var(--muted); }
+    nav a { text-decoration: none; }
+    nav a:hover { color: var(--text); }
+
+    main { padding: 4rem 0 5rem; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(18rem, .75fr);
+      gap: 2rem;
+      align-items: center;
+      min-height: 32rem;
+    }
+
+    .hero > * { min-width: 0; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .35rem .7rem;
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: .8rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+    h1 { max-width: 12ch; margin: 1rem 0; font-size: clamp(3rem, 8vw, 6.25rem); line-height: .96; letter-spacing: -.07em; }
+    .lede { max-width: 42rem; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.3rem); }
+
+    .install-card {
+      margin-top: 2rem;
+      padding: .75rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+    }
+
+    .install-label { margin: .15rem .4rem .65rem; color: var(--muted); font-size: .82rem; font-weight: 700; }
+    .command { position: relative; margin: 0; padding: 1.25rem 7rem 1.25rem 1.25rem; border-radius: .7rem; background: var(--code); color: var(--code-text); overflow-x: auto; }
+    .command code { white-space: nowrap; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: .84rem; }
+    .copy {
+      position: absolute;
+      top: .75rem;
+      right: .75rem;
+      padding: .5rem .8rem;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: .5rem;
+      background: rgba(255, 255, 255, .1);
+      color: #fff;
+      cursor: pointer;
+    }
+    .copy:hover { background: rgba(255, 255, 255, .18); }
+    .install-note { margin: .75rem .4rem .15rem; color: var(--muted); font-size: .88rem; }
+
+    .hero-aside, .card, .recovery {
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-aside { padding: 1.5rem; }
+    .hero-aside h2, .section-title { margin: 0 0 .75rem; letter-spacing: -.035em; }
+    .checklist { display: grid; gap: .75rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+    .checklist li::before { content: "✓"; margin-right: .65rem; color: var(--accent); font-weight: 900; }
+
+    section { padding-top: 5rem; }
+    .section-copy { max-width: 42rem; margin: 0 0 2rem; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .card { padding: 1.25rem; box-shadow: none; }
+    .card h3 { margin: 0 0 .4rem; }
+    .card p { margin: 0; color: var(--muted); }
+
+    .recovery { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1.5rem; }
+    .recovery h2, .recovery p { margin: 0; }
+    .recovery p { color: var(--muted); }
+    .resume { padding: .8rem 1rem; border-radius: .65rem; background: var(--code); color: var(--code-text); white-space: nowrap; }
+
+    .warning { margin-top: 2rem; padding: 1rem 1.25rem; border-left: 4px solid #d39116; background: color-mix(in srgb, #d39116 10%, var(--panel)); }
+    footer { display: flex; justify-content: space-between; gap: 1rem; padding: 2rem 0 3rem; border-top: 1px solid var(--line); color: var(--muted); }
+    footer a { color: var(--text); }
+
+    @media (max-width: 850px) {
+      main { padding-top: 2rem; }
+      .hero { grid-template-columns: 1fr; min-height: auto; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      nav { gap: .65rem; font-size: .9rem; }
+      h1 { font-size: 3.4rem; }
+      .grid { grid-template-columns: 1fr; }
+      .recovery, footer { align-items: flex-start; flex-direction: column; }
+      .command { padding-right: 1.25rem; padding-top: 4.25rem; }
+      .copy { left: .75rem; right: auto; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1118;
+        --panel: rgba(25, 28, 39, .85);
+        --panel-strong: #191c27;
+        --text: #f3f4f8;
+        --muted: #a9afc0;
+        --line: #303444;
+        --accent: #a99fff;
+        --accent-strong: #c2bbff;
+        --accent-soft: #252341;
+        --shadow: 0 24px 70px rgba(0, 0, 0, .3);
+      }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Fixplizz Workstation</h1>
-    <p class="status">Status: release candidate</p>
-    <p>Supported system: Ubuntu 26.04 Desktop amd64.</p>
-    <p>Install the current release candidate with one command:</p>
-    <pre><code>bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'</code></pre>
-    <p><strong>Warning:</strong> the script installs system packages and applications and changes guarded workstation settings.</p>
-    <p>If installation is interrupted, continue with:</p>
-    <pre><code>fixplizz resume</code></pre>
-    <p><a href="https://github.com/fixplizz/rw-workstation-bootstrap">View the public GitHub repository</a>.</p>
-  </main>
+  <div class="shell">
+    <header>
+      <a class="brand" href="./">Fixplizz</a>
+      <nav aria-label="Project links">
+        <a href="https://github.com/fixplizz/rw-workstation-bootstrap">GitHub</a>
+        <a href="https://github.com/fixplizz/rw-workstation-bootstrap/releases">Releases</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <span class="eyebrow">Release Candidate · v0.1.0-rc4</span>
+          <h1>Your Ubuntu workstation, ready.</h1>
+          <p class="lede">Install a consistent development, DevOps, AI, daily work, and remote-access setup on Ubuntu 26.04 Desktop amd64.</p>
+
+          <div class="install-card">
+            <p class="install-label">Run as your regular user</p>
+            <pre class="command"><code id="install-command">bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'</code><button class="copy" id="copy-install" type="button">Copy</button></pre>
+            <p class="install-note" id="copy-status" aria-live="polite">The installer requests sudo only for system operations.</p>
+          </div>
+        </div>
+
+        <aside class="hero-aside">
+          <h2>Requirements</h2>
+          <ul class="checklist">
+            <li>Ubuntu 26.04 Desktop amd64</li>
+            <li>Regular user with sudo</li>
+            <li>Internet connection</li>
+            <li>GNOME on Wayland recommended</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section aria-labelledby="features-title">
+        <h2 class="section-title" id="features-title">A practical workstation baseline</h2>
+        <p class="section-copy">Fixplizz installs ordered, resumable modules and records each run in JSON with a complete log.</p>
+        <div class="grid">
+          <article class="card"><h3>Development</h3><p>GitHub CLI, mise, uv, Node.js LTS, pnpm, Python, Go, Rust, databases, and shell tooling.</p></article>
+          <article class="card"><h3>DevOps</h3><p>Docker, kubectl, Helm, k9s, OpenTofu, Ansible, SOPS, Trivy, Gitleaks, and Hadolint.</p></article>
+          <article class="card"><h3>AI and daily work</h3><p>Codex CLI, OpenCode CLI, Obsidian, Zen Browser, LocalSend, LibreOffice, FFmpeg, and Poppler.</p></article>
+          <article class="card"><h3>Desktop and remote</h3><p>Guarded GNOME defaults, Alacritty, Starship, NetBird, RustDesk, and Termix.</p></article>
+        </div>
+        <p class="warning"><strong>System changes:</strong> the script installs system packages and applications. Review the public repository before running it on a machine you need to preserve.</p>
+      </section>
+
+      <section>
+        <div class="recovery">
+          <div><h2>Continue after an interruption</h2><p>Fixplizz skips completed modules and retries the failed step.</p></div>
+          <code class="resume">fixplizz resume</code>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Fixplizz Workstation · MIT License</span>
+      <span><a href="https://github.com/fixplizz/rw-workstation-bootstrap">Source</a> · <a href="https://github.com/fixplizz/rw-workstation-bootstrap/releases">Release notes</a></span>
+    </footer>
+  </div>
+
+  <script>
+    const copyButton = document.getElementById('copy-install');
+    const installCommand = document.getElementById('install-command');
+    const copyStatus = document.getElementById('copy-status');
+
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(installCommand.textContent);
+        copyButton.textContent = 'Copied';
+        copyStatus.textContent = 'Installation command copied to the clipboard.';
+      } catch (_) {
+        copyStatus.textContent = 'Copy failed. Select the command and copy it manually.';
+      }
+    });
+  </script>
 </body>
 </html>

@@ -31,9 +31,43 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
   first_command="$(awk '/^```bash$/ {getline; print; exit}' "$ROOT/README.md")"
   [ "$first_command" = "bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'" ]
   grep -Fq "https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc4/boot.sh" "$ROOT/README.md"
-  grep -Fq 'v0.1.0 remains blocked' "$ROOT/README.md"
+  grep -Fq 'Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.' "$ROOT/README.md"
   [ -f "$ROOT/docs/native-smoke-test.md" ]
   [ -f "$ROOT/docs/native-smoke-report-template.md" ]
+}
+
+@test "README presents the public project structure and honest badges" {
+  grep -Fq '# Fixplizz Workstation' "$ROOT/README.md"
+  grep -Fq '> One-command workstation bootstrap for Ubuntu 26.04 LTS' "$ROOT/README.md"
+  grep -Fq 'actions/workflows/ci.yml/badge.svg' "$ROOT/README.md"
+  grep -Fq 'github/v/release/fixplizz/rw-workstation-bootstrap?include_prereleases' "$ROOT/README.md"
+  grep -Fq 'Ubuntu_26.04_LTS' "$ROOT/README.md"
+  grep -Fq 'license-MIT' "$ROOT/README.md"
+  ! grep -Eiq 'downloads|coverage|stars' "$ROOT/README.md"
+
+  for heading in 'What you get' 'Why Fixplizz' 'Requirements' 'Useful commands' 'State, logs and recovery' 'Safety boundaries' 'Architecture' 'Release status' 'License and attribution'; do
+    grep -Fq "## $heading" "$ROOT/README.md"
+  done
+}
+
+@test "README documents profile, commands, state and safety boundaries" {
+  grep -Fq 'core → desktop → terminal → developer → devops-base → ai-base → daily-base → remote-base' "$ROOT/README.md"
+  for command in 'fixplizz status' 'fixplizz status --json' 'fixplizz doctor' 'fixplizz doctor --json' 'fixplizz commands' 'fixplizz resume' 'fixplizz install --profile mvp --dry-run'; do
+    grep -Fq "$command" "$ROOT/README.md"
+  done
+  for path in '~/.local/share/fixplizz' '~/.local/state/fixplizz' '~/.config/fixplizz' '~/.cache/fixplizz' '~/.local/bin/fixplizz' 'runs/<run-id>/run.json' 'runs/<run-id>/modules/*.json' 'runs/<run-id>/install.log'; do
+    grep -Fq "$path" "$ROOT/README.md"
+  done
+  for boundary in 'remove or block Snap' 'run a distribution upgrade' 'enable an SSH server' 'weaken AppArmor' 'create credentials' 'sign in to applications' 'fetch a private repository' 'without creating a backup'; do
+    grep -Fqi "$boundary" "$ROOT/README.md"
+  done
+}
+
+@test "README required local documentation links resolve" {
+  for path in docs/architecture.md docs/development.md docs/native-smoke-test.md docs/secrets-repository.md docs/upstream.md NOTICE.md THIRD_PARTY_NOTICES.md LICENSE; do
+    [ -f "$ROOT/$path" ]
+    grep -Fq "($path)" "$ROOT/README.md"
+  done
 }
 
 @test "Pages install is the complete RC4 bootstrap without HTML" {
@@ -56,10 +90,23 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
 @test "Pages landing page is static and documents the supported pilot" {
   grep -Fq 'Fixplizz Workstation' "$ROOT/docs/index.html"
   grep -Fq 'Ubuntu 26.04 Desktop amd64' "$ROOT/docs/index.html"
-  grep -Fq 'release candidate' "$ROOT/docs/index.html"
+  grep -Fq 'Release Candidate' "$ROOT/docs/index.html"
   grep -Fq 'fixplizz resume' "$ROOT/docs/index.html"
   grep -Fq 'https://github.com/fixplizz/rw-workstation-bootstrap' "$ROOT/docs/index.html"
-  ! grep -Eiq '<script|analytics|cookie|<form' "$ROOT/docs/index.html"
+  grep -Fq 'https://github.com/fixplizz/rw-workstation-bootstrap/releases' "$ROOT/docs/index.html"
+  grep -Fq 'prefers-color-scheme: dark' "$ROOT/docs/index.html"
+  grep -Fq '.hero > * { min-width: 0; }' "$ROOT/docs/index.html"
+  grep -Fq 'rel="icon" href="data:image/svg+xml' "$ROOT/docs/index.html"
+  grep -Fq 'id="copy-install"' "$ROOT/docs/index.html"
+  grep -Fq 'navigator.clipboard.writeText' "$ROOT/docs/index.html"
+  ! grep -Eiq '<script[^>]+src=|analytics|cookie|tracker|<form|https://cdn' "$ROOT/docs/index.html"
+}
+
+@test "README and Pages publish the same primary installation command" {
+  readme_command="$(awk '/^```bash$/ {getline; print; exit}' "$ROOT/README.md")"
+  page_command="$(sed -n 's/.*<code id="install-command">\(.*\)<\/code>.*/\1/p' "$ROOT/docs/index.html")"
+  [ -n "$page_command" ]
+  [ "$page_command" = "$readme_command" ]
 }
 
 @test "README one-command wrapper returns non-zero when download fails" {
