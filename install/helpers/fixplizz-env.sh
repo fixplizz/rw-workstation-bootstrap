@@ -14,7 +14,7 @@ fixplizz_repo_root() {
 
 export FIXPLIZZ_BRAND="${FIXPLIZZ_BRAND:-Fixplizz Workstation}"
 export FIXPLIZZ_REPO="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
-export FIXPLIZZ_REF="${FIXPLIZZ_REF:-v0.1.0-rc4}"
+export FIXPLIZZ_REF="${FIXPLIZZ_REF:-v0.1.0-rc5}"
 export FIXPLIZZ_CHANNEL="${FIXPLIZZ_CHANNEL:-rc}"
 export FIXPLIZZ_PROFILE="${FIXPLIZZ_PROFILE:-mvp}"
 export FIXPLIZZ_NONINTERACTIVE="${FIXPLIZZ_NONINTERACTIVE:-1}"
@@ -30,6 +30,15 @@ export FIXPLIZZ_BIN_HOME="${FIXPLIZZ_BIN_HOME:-$HOME/.local/bin}"
 export FIXPLIZZ_BIN="${FIXPLIZZ_BIN:-$FIXPLIZZ_BIN_HOME/fixplizz}"
 export FIXPLIZZ_LOG_DIR="${FIXPLIZZ_LOG_DIR:-/var/log/fixplizz}"
 export FIXPLIZZ_LIB_DIR="${FIXPLIZZ_LIB_DIR:-/var/lib/fixplizz}"
+
+case ":$PATH:" in
+  *":$FIXPLIZZ_BIN_HOME:"*) ;;
+  *) export PATH="$FIXPLIZZ_BIN_HOME:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/.local/share/mise/shims:"*) ;;
+  *) export PATH="$HOME/.local/share/mise/shims:$PATH" ;;
+esac
 
 fixplizz_version() {
   if [[ -r "$FIXPLIZZ_ROOT/version" ]]; then

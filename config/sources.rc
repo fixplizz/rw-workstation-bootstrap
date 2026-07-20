@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Pinned, official amd64 release sources for v0.1.0-rc4.
+# Pinned, official amd64 release sources for v0.1.0-rc5.
 STARSHIP_VERSION=1.26.0
 STARSHIP_URL=https://github.com/starship/starship/releases/download/v1.26.0/starship-x86_64-unknown-linux-gnu.tar.gz
 STARSHIP_SHA256=321f0dd7af8340a5f2e6a8fec6538a04f617486f9ec70d878f91c09cd8deef22
@@ -72,10 +72,26 @@ TERMIX_SHA256=afbb553b206941c8b25d07fa8c0389ce92c89279f9d87f43cf574a2ee25fcb89
 CODEX_VERSION=0.144.6
 CODEX_INTEGRITY=sha512-wk+2CWiBNXiJLBoN2D08N9RceWkSBnlgk5g2K1a4CXrP/C0gdlHyRUG7RFzm9y41DCK/7tvCct233JVxyFmznw==
 PNPM_VERSION=11.15.0
+YARN_VERSION=4.17.1
+COREPACK_VERSION=0.35.0
+TYPESCRIPT_VERSION=7.0.2
+TSX_VERSION=4.23.1
+ESLINT_VERSION=10.7.0
+PRETTIER_VERSION=3.9.5
+VITEST_VERSION=4.1.10
+
+HERDR_VERSION=0.7.4
+HERDR_URL=https://github.com/ogulcancelik/herdr/releases/download/v0.7.4/herdr-linux-x86_64
+HERDR_SHA256=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059
+
+HERMES_AGENT_VERSION=0.18.2
+HERMES_AGENT_PYTHON_VERSION=3.13
+HERMES_AGENT_URL=https://files.pythonhosted.org/packages/0c/4c/91652c61450763bfe165c65b83026503de0ac9ddad2c11ee522490bf4c2d/hermes_agent-0.18.2-py3-none-any.whl
+HERMES_AGENT_SHA256=8f02155cfc84b28bd98551cd18dffec0efa9ec070dd08f90f1a850f1c779492f
 
 fixplizz_validate_sources() {
   local prefix url sha url_key sha_key
-  for prefix in STARSHIP ZOXIDE NERD_FONT MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD RUSTDESK TERMIX; do
+  for prefix in STARSHIP ZOXIDE NERD_FONT MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD RUSTDESK TERMIX HERDR HERMES_AGENT; do
     url_key="${prefix}_URL"
     sha_key="${prefix}_SHA256"
     url="${!url_key}"

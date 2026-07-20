@@ -24,6 +24,7 @@ PR1_SHELL_FILES=(
   bin/fixplizz-doctor
   bin/fixplizz-help
   bin/fixplizz-resume
+  bin/fixplizz-runtime
   bin/fixplizz-status
   bin/fixplizz-version
   install/helpers/fixplizz-env.sh
@@ -122,6 +123,7 @@ for file in \
   bin/fixplizz-doctor \
   bin/fixplizz-help \
   bin/fixplizz-resume \
+  bin/fixplizz-runtime \
   bin/fixplizz-status \
   bin/fixplizz-version \
   install/helpers/fixplizz-env.sh \

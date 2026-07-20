@@ -23,7 +23,7 @@ json_query() {
 @test "fixplizz version renders version" {
   run "$CLI" version
   [ "$status" -eq 0 ]
-  [ "$output" = "Fixplizz Workstation 0.1.0-rc4" ]
+  [ "$output" = "Fixplizz Workstation 0.1.0-rc5" ]
 }
 
 @test "fixplizz commands lists PR1 commands" {
@@ -98,4 +98,67 @@ json_query() {
   run "$CLI" status --json
   [ "$status" -eq 0 ]
   printf '%s' "$output" | json_query 'assert data["status"]["installation_state"] == "not-installed"; assert data["status"]["release_stage"] == "release-candidate"; assert data["command"] == "status"'
+}
+
+@test "runtime list exposes selectable development runtimes" {
+  run "$CLI" runtime list
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"bun"* ]]
+  [[ "$output" == *"deno"* ]]
+  [[ "$output" == *"java"* ]]
+  [[ "$output" == *"dotnet"* ]]
+  [[ "$output" == *"ruby"* ]]
+  [[ "$output" == *"php"* ]]
+  [[ "$output" == *"elixir"* ]]
+  [[ "$output" == *"zig"* ]]
+}
+
+@test "runtime install delegates only selected runtimes to mise" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mise_log="$BATS_TEST_TMPDIR/mise.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/mise" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$MISE_LOG"
+SH
+  chmod +x "$fake_bin/mise"
+
+  run env PATH="$fake_bin:$PATH" MISE_LOG="$mise_log" "$CLI" runtime install bun java zig
+  [ "$status" -eq 0 ]
+  grep -Fxq 'use --global bun@latest' "$mise_log"
+  grep -Fxq 'use --global java@temurin-25' "$mise_log"
+  grep -Fxq 'use --global zig@latest' "$mise_log"
+  [ "$(wc -l <"$mise_log" | tr -d ' ')" -eq 3 ]
+}
+
+@test "runtime install includes Erlang when Elixir is selected" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mise_log="$BATS_TEST_TMPDIR/mise.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/mise" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$MISE_LOG"
+SH
+  chmod +x "$fake_bin/mise"
+
+  run env PATH="$fake_bin:$PATH" MISE_LOG="$mise_log" "$CLI" runtime install elixir
+  [ "$status" -eq 0 ]
+  grep -Fxq 'use --global erlang@latest' "$mise_log"
+  grep -Fxq 'use --global elixir@latest' "$mise_log"
+}
+
+@test "runtime install rejects unknown runtimes before invoking mise" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mise_log="$BATS_TEST_TMPDIR/mise.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/mise" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$MISE_LOG"
+SH
+  chmod +x "$fake_bin/mise"
+
+  run env PATH="$fake_bin:$PATH" MISE_LOG="$mise_log" "$CLI" runtime install cobol
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Unsupported runtime: cobol"* ]]
+  [ ! -e "$mise_log" ]
 }

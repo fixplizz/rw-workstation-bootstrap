@@ -127,9 +127,114 @@ printf '%s\n' "$*" >>"$NPM_LOG"
 SH
   chmod +x "$fake_bin/codex" "$fake_bin/npm"
 
-  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; module_apply_custom"
+  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; module_apply_custom"
   [ "$status" -eq 0 ]
   [ ! -e "$npm_log" ]
+}
+
+@test "Hermes wheel checksum mismatch prevents uv tool installation" {
+  fixture="$BATS_TEST_TMPDIR/hermes.whl"
+  uv_log="$BATS_TEST_TMPDIR/uv.log"
+  fake_uv="$FIXPLIZZ_BIN_HOME/uv"
+  printf 'not trusted\n' >"$fixture"
+  cat >"$fake_uv" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$UV_LOG"
+SH
+  chmod +x "$fake_uv"
+
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" UV_LOG="$uv_log" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_uv_tool hermes-agent https://example.test/hermes.whl '0000000000000000000000000000000000000000000000000000000000000000' 3.13 hermes"
+  [ "$status" -ne 0 ]
+  [ ! -e "$uv_log" ]
+  [ ! -e "$FIXPLIZZ_BIN_HOME/hermes" ]
+}
+
+@test "Hermes installs from the exact checksum-verified wheel through uv" {
+  fixture="$BATS_TEST_TMPDIR/hermes.whl"
+  uv_log="$BATS_TEST_TMPDIR/uv.log"
+  fake_uv="$FIXPLIZZ_BIN_HOME/uv"
+  printf 'verified hermes wheel\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  cat >"$fake_uv" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$UV_LOG"
+mkdir -p "$FIXPLIZZ_BIN_HOME"
+printf '#!/bin/sh\nexit 0\n' >"$FIXPLIZZ_BIN_HOME/hermes"
+chmod +x "$FIXPLIZZ_BIN_HOME/hermes"
+SH
+  chmod +x "$fake_uv"
+
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" UV_LOG="$uv_log" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_uv_tool hermes-agent https://example.test/hermes.whl '$expected' 3.13 hermes"
+  [ "$status" -eq 0 ]
+  [ -x "$FIXPLIZZ_BIN_HOME/hermes" ]
+  grep -Eq '^tool install --python 3\.13 --force /.*fixplizz-hermes-agent\..*\.whl$' "$uv_log"
+}
+
+@test "managed shell integration provides stable h and agents aliases" {
+  rc="$HOME/.bashrc"
+  touch "$rc"
+  run bash -c "source '$ROOT/install/helpers/files.sh'; fixplizz_install_shell_integration '$rc'"
+  [ "$status" -eq 0 ]
+  grep -Fxq "alias h='hermes'" "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+  grep -Fxq "alias agents='herdr'" "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+  grep -Fq '$HOME/.local/share/mise/shims' "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+}
+
+@test "developer plan includes complete Node.js application toolchain" {
+  run "$ROOT/modules/developer.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'package\tubuntu\tclang'* ]]
+  [[ "$output" == *$'package\tubuntu\tcmake'* ]]
+  [[ "$output" == *"TypeScript"* ]]
+  [[ "$output" == *"Yarn"* ]]
+  [[ "$output" == *"Vitest"* ]]
+}
+
+@test "Fixplizz environment exposes user CLI and mise shims immediately" {
+  run bash -c "source '$ROOT/install/helpers/fixplizz-env.sh'; printf '%s\n' \"\$PATH\""
+  [ "$status" -eq 0 ]
+  [[ ":$output:" == *":$FIXPLIZZ_BIN_HOME:"* ]]
+  [[ ":$output:" == *":$HOME/.local/share/mise/shims:"* ]]
+}
+
+@test "Node and Codex npm installs are user-scoped global CLI installs" {
+  grep -Fq 'install --global --prefix "$HOME/.local"' "$ROOT/modules/developer.sh"
+  grep -Fq 'install --global --prefix "$HOME/.local"' "$ROOT/modules/ai-base.sh"
+  ! grep -REq 'sudo[[:space:]]+npm' "$ROOT/modules/developer.sh" "$ROOT/modules/ai-base.sh"
+}
+
+@test "developer module invokes pinned user-scoped Node CLI installation" {
+  npm_log="$BATS_TEST_TMPDIR/node-npm.log"
+  corepack_log="$BATS_TEST_TMPDIR/corepack.log"
+  mkdir -p "$HOME/.local/share/mise/shims" "$FIXPLIZZ_BIN_HOME"
+  cat >"$FIXPLIZZ_BIN_HOME/mise" <<'SH'
+#!/bin/sh
+exit 0
+SH
+  cat >"$HOME/.local/share/mise/shims/npm" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+SH
+  cat >"$FIXPLIZZ_BIN_HOME/corepack" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$COREPACK_LOG"
+SH
+  chmod +x "$FIXPLIZZ_BIN_HOME/mise" "$HOME/.local/share/mise/shims/npm" "$FIXPLIZZ_BIN_HOME/corepack"
+
+  run env NPM_LOG="$npm_log" COREPACK_LOG="$corepack_log" bash -c "source '$ROOT/modules/developer.sh' plan >/dev/null; fixplizz_install_binary() { :; }; fixplizz_install_tar_binary() { :; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  grep -Fq "install --global --prefix $HOME/.local corepack@0.35.0 typescript@7.0.2 tsx@4.23.1 eslint@10.7.0 prettier@3.9.5 vitest@4.1.10" "$npm_log"
+  grep -Fxq "prepare pnpm@11.15.0 --activate" "$corepack_log"
+  grep -Fxq "prepare yarn@4.17.1 --activate" "$corepack_log"
+}
+
+@test "terminal and AI plans include pinned herdr and Hermes Agent" {
+  run "$ROOT/modules/terminal.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"herdr"* ]]
+  run "$ROOT/modules/ai-base.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Hermes Agent"* ]]
 }
 
 @test "MVP modules keep credential and system safety boundaries" {

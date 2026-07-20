@@ -35,17 +35,21 @@ fixplizz_install_shell_integration() {
   local marker='# FIXPLIZZ MANAGED SHELL'
   local snippet="$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
   mkdir -p "$(dirname -- "$snippet")"
-  if [[ ! -e $snippet ]]; then
-    cat >"$snippet" <<'EOF'
+  cat >"$snippet" <<'EOF'
 # Managed by Fixplizz Workstation.
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *) export PATH="$HOME/.local/bin:$PATH" ;;
 esac
+case ":$PATH:" in
+  *":$HOME/.local/share/mise/shims:"*) ;;
+  *) export PATH="$HOME/.local/share/mise/shims:$PATH" ;;
+esac
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init bash)"
+alias h='hermes'
+alias agents='herdr'
 EOF
-  fi
   mkdir -p "$(dirname -- "$rc_file")"
   touch "$rc_file"
   if grep -Fq "$marker" "$rc_file"; then

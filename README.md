@@ -10,7 +10,7 @@
 Fixplizz turns a clean Ubuntu desktop into a consistent workstation for software development, infrastructure work, AI-assisted coding, daily applications, and remote access.
 
 > [!WARNING]
-> **Release Candidate:** `v0.1.0-rc4` is ready for pilot use on supported systems. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
+> **Release Candidate:** `v0.1.0-rc5` adds the requested Hermes/herdr agent workspace and selectable development runtimes. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
 ## One-command installation
 
@@ -32,10 +32,10 @@ fixplizz resume
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Core          | Git, curl, wget, jq/yq, ripgrep, fd, bat, fzf, btop, tmux, direnv, Flatpak, ShellCheck, shfmt, SSH client, Wayland clipboard |
 | Desktop       | Guarded GNOME defaults, four workspaces, dock click-to-minimize, `~/Applications`                                            |
-| Terminal      | Alacritty, Starship, zoxide, JetBrains Mono Nerd Font, tmux, fzf, btop                                                       |
-| Development   | GitHub CLI, mise, uv, Node.js LTS, pnpm, Python tooling, Go, Rust, pipx, SQLite, PostgreSQL client, Redis CLI                |
+| Terminal      | Alacritty, Starship, zoxide, herdr (`agents`), JetBrains Mono Nerd Font, tmux, fzf, btop                                     |
+| Development   | Node.js LTS, npm/npx, Corepack, pnpm, Yarn, TypeScript, tsx, ESLint, Prettier, Vitest, node-gyp prerequisites, Python, Go, Rust, mise, uv, GitHub CLI, databases |
 | DevOps        | Docker, Compose, kubectl, Helm, k9s, OpenTofu, Ansible, SOPS, age, Trivy, Gitleaks, Hadolint                                 |
-| AI            | OpenAI Codex CLI and OpenCode CLI                                                                                            |
+| AI            | OpenAI Codex CLI, OpenCode CLI, and Hermes Agent (`hermes` or `h`)                                                          |
 | Daily work    | Obsidian, Zen Browser, LocalSend, LibreOffice, FFmpeg, Poppler                                                               |
 | Remote access | NetBird, RustDesk, Termix                                                                                                    |
 
@@ -75,7 +75,18 @@ fixplizz doctor --json
 fixplizz commands
 fixplizz resume
 fixplizz install --profile mvp --dry-run
+fixplizz runtime list
+fixplizz runtime install bun deno
 ```
+
+The base workstation installs Node.js-first development tooling plus Python, Go, and Rust. Additional runtimes are an explicit choice:
+
+```bash
+fixplizz runtime install bun
+fixplizz runtime install deno java dotnet ruby php elixir zig
+```
+
+Supported optional names are `bun`, `deno`, `java`, `dotnet`, `ruby`, `php`, `elixir`, and `zig`. Run only the names you actually need. Fixplizz installs them through the already-managed `mise` environment.
 
 ## State, logs and recovery
 
@@ -101,10 +112,10 @@ On failure, Fixplizz prints the stage or module, exit code, full log path, and t
 
 ### Technical fallback
 
-If GitHub Pages is unavailable, run the immutable RC4 bootstrap from GitHub Raw:
+If GitHub Pages is unavailable, run the immutable RC5 bootstrap from GitHub Raw:
 
 ```bash
-bash -c 'set -o pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc4/boot.sh | bash'
+bash -c 'set -o pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc5/boot.sh | bash'
 ```
 
 ## Safety boundaries
@@ -140,11 +151,11 @@ Maintainer and architecture documentation:
 
 ## Release status
 
-**Current release:** `v0.1.0-rc4`
+**Current release:** `v0.1.0-rc5`
 
 Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
-See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc4).
+See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc5).
 
 ## License and attribution
 

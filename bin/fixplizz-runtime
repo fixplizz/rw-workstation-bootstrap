@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# fixplizz:group=runtime
+# fixplizz:summary=List or install optional development runtimes
+# fixplizz:args={list|install NAME...}
+
+set -Eeuo pipefail
+
+declare -A RUNTIME_SPECS=(
+  [bun]='bun@latest'
+  [deno]='deno@latest'
+  [java]='java@temurin-25'
+  [dotnet]='dotnet@latest'
+  [ruby]='ruby@latest'
+  [php]='php@latest'
+  [elixir]='erlang@latest elixir@latest'
+  [zig]='zig@latest'
+)
+RUNTIME_NAMES=(bun deno java dotnet ruby php elixir zig)
+
+show_runtimes() {
+  local name
+  printf 'Optional Fixplizz development runtimes:\n'
+  for name in "${RUNTIME_NAMES[@]}"; do
+    printf '  %-8s %s\n' "$name" "${RUNTIME_SPECS[$name]}"
+  done
+}
+
+install_runtimes() {
+  local name mise_binary spec
+  local -a specs
+  (($# > 0)) || {
+    printf 'Usage: fixplizz runtime install NAME...\n' >&2
+    return 2
+  }
+  for name in "$@"; do
+    if [[ -z ${RUNTIME_SPECS[$name]:-} ]]; then
+      printf 'Unsupported runtime: %s\n' "$name" >&2
+      return 2
+    fi
+  done
+  mise_binary="$(command -v mise || true)"
+  [[ -n $mise_binary ]] || {
+    printf 'mise is not installed; run the Fixplizz workstation installer first.\n' >&2
+    return 1
+  }
+  for name in "$@"; do
+    printf 'Installing optional runtime: %s\n' "$name"
+    read -r -a specs <<<"${RUNTIME_SPECS[$name]}"
+    for spec in "${specs[@]}"; do
+      "$mise_binary" use --global "$spec"
+    done
+  done
+}
+
+case "${1:-}" in
+  list)
+    show_runtimes
+    ;;
+  install)
+    shift
+    install_runtimes "$@"
+    ;;
+  *)
+    printf 'Usage: fixplizz runtime {list|install NAME...}\n' >&2
+    exit 2
+    ;;
+esac

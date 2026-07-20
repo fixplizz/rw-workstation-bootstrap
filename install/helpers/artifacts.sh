@@ -77,6 +77,41 @@ fixplizz_install_binary() {
   fixplizz_download_verified "$name" "$url" "$sha" "$FIXPLIZZ_BIN_HOME/$binary_name"
 }
 
+fixplizz_install_uv_tool() {
+  local name="$1" url="$2" sha="$3" python_version="$4" command_name="$5"
+  local wheel uv_binary
+  : "${FIXPLIZZ_BIN_HOME:=$HOME/.local/bin}"
+  [[ $url == https://* ]] || return 1
+  if [[ -x $FIXPLIZZ_BIN_HOME/$command_name ]] && fixplizz_simple_marker_matches "$name" "$sha"; then
+    return 0
+  fi
+  uv_binary="$FIXPLIZZ_BIN_HOME/uv"
+  [[ -x $uv_binary ]] || {
+    printf 'uv is required before installing %s\n' "$name" >&2
+    return 1
+  }
+  wheel="$(mktemp "${TMPDIR:-/tmp}/fixplizz-${name}.XXXXXX.whl")"
+  if [[ -n ${FIXPLIZZ_TEST_DOWNLOAD_FILE:-} ]]; then
+    cp -- "$FIXPLIZZ_TEST_DOWNLOAD_FILE" "$wheel"
+  else
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$wheel" "$url"
+  fi
+  if ! fixplizz_verify_sha256 "$wheel" "$sha"; then
+    rm -f "$wheel"
+    return 1
+  fi
+  if ! UV_TOOL_BIN_DIR="$FIXPLIZZ_BIN_HOME" "$uv_binary" tool install --python "$python_version" --force "$wheel"; then
+    rm -f "$wheel"
+    return 1
+  fi
+  rm -f "$wheel"
+  [[ -x $FIXPLIZZ_BIN_HOME/$command_name ]] || {
+    printf '%s did not install expected command: %s\n' "$name" "$command_name" >&2
+    return 1
+  }
+  fixplizz_write_simple_marker "$name" "$sha"
+}
+
 fixplizz_install_tar_binary() {
   local name="$1" url="$2" sha="$3" member="$4" binary_name="$5"
   local archive extract_dir destination
