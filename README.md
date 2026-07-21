@@ -10,7 +10,7 @@
 Fixplizz turns a clean Ubuntu desktop into a consistent workstation for software development, infrastructure work, AI-assisted coding, daily applications, and remote access.
 
 > [!WARNING]
-> **Release Candidate:** `v0.1.0-rc7` adds the Orca desktop agent IDE to the short one-command installer and keeps runtime selection available during installation. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
+> **Release Candidate:** `v0.1.0-rc8` fixes annotated-tag checkout noise in the short one-command installer and includes the Orca desktop agent IDE. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
 ## One-command installation
 
@@ -125,10 +125,10 @@ On failure, Fixplizz prints the stage or module, exit code, full log path, and t
 
 ### Technical fallback
 
-If the short endpoint is unavailable, run the immutable RC7 bootstrap from GitHub Raw:
+If the short endpoint is unavailable, run the immutable RC8 bootstrap from GitHub Raw:
 
 ```bash
-bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc7/boot.sh | bash'
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc8/boot.sh | bash'
 ```
 
 ## Safety boundaries
@@ -164,11 +164,11 @@ Maintainer and architecture documentation:
 
 ## Release status
 
-**Current release:** `v0.1.0-rc7`
+**Current release:** `v0.1.0-rc8`
 
 Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
-See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc7). Orca documentation is available at [onorca.dev](https://www.onorca.dev/docs), with source code in the [stablyai/orca repository](https://github.com/stablyai/orca).
+See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc8). Orca documentation is available at [onorca.dev](https://www.onorca.dev/docs), with source code in the [stablyai/orca repository](https://github.com/stablyai/orca).
 
 ## License and attribution
 

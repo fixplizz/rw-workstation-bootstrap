@@ -9,14 +9,14 @@ The harness requires an immutable annotated release tag. It resolves that tag to
 Review the plan without changing the host:
 
 ```bash
-FIXPLIZZ_SMOKE_REF=v0.1.0-rc7 \
+FIXPLIZZ_SMOKE_REF=v0.1.0-rc8 \
   scripts/smoke/native-ubuntu-26.04.sh
 ```
 
 Execute only after confirming that the machine is disposable:
 
 ```bash
-FIXPLIZZ_SMOKE_REF=v0.1.0-rc7 \
+FIXPLIZZ_SMOKE_REF=v0.1.0-rc8 \
 FIXPLIZZ_NATIVE_SMOKE_ACK=ubuntu-26.04-disposable \
   scripts/smoke/native-ubuntu-26.04.sh --execute
 ```
@@ -42,7 +42,7 @@ Phase 1 never declares PASS. If logout or reboot is required, complete the exact
 After the requested logout/relogin and reboot, run:
 
 ```bash
-FIXPLIZZ_SMOKE_REF=v0.1.0-rc7 \
+FIXPLIZZ_SMOKE_REF=v0.1.0-rc8 \
 FIXPLIZZ_SMOKE_LOGOUT_PERFORMED=yes \
 FIXPLIZZ_SMOKE_REBOOT_PERFORMED=yes \
   scripts/smoke/native-ubuntu-26.04.sh --verify-after-reboot
@@ -62,7 +62,7 @@ The following checks remain manual because reliable headless verification is not
 After completing every item in `~/.local/state/fixplizz/native-smoke/manual-gui-checklist.txt`, explicitly confirm them:
 
 ```bash
-FIXPLIZZ_SMOKE_REF=v0.1.0-rc7 \
+FIXPLIZZ_SMOKE_REF=v0.1.0-rc8 \
 FIXPLIZZ_SMOKE_LOGOUT_PERFORMED=yes \
 FIXPLIZZ_SMOKE_REBOOT_PERFORMED=yes \
 FIXPLIZZ_SMOKE_MANUAL_GUI_ACK=gui-checks-passed \

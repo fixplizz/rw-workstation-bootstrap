@@ -36,3 +36,9 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *'"installation_state":"completed"'* ]]
 }
+
+@test "public bootstrap fetches an annotated release tag without branch clone advice" {
+  ! grep -Fq 'git clone --quiet --depth 1 --branch "$ref"' "$ROOT/boot.sh"
+  grep -Fq 'fetch --quiet --depth 1 origin "refs/tags/$ref"' "$ROOT/boot.sh"
+  grep -Fq 'advice.detachedHead=false checkout --quiet --detach FETCH_HEAD' "$ROOT/boot.sh"
+}

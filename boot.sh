@@ -17,7 +17,7 @@ fixplizz_bootstrap_failure() {
   printf 'Exit code: %s\n' "$status"
   printf 'Full log: %s\n' "$FIXPLIZZ_FULL_LOG"
   printf "Continue: bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/%s/%s/boot.sh | bash'\n" \
-    "${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}" "${FIXPLIZZ_REF:-v0.1.0-rc7}"
+    "${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}" "${FIXPLIZZ_REF:-v0.1.0-rc8}"
   printf '============================================================\n'
   exit "$status"
 }
@@ -93,7 +93,7 @@ if [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 && -z ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
 fi
 
 repo="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
-ref="${FIXPLIZZ_REF:-v0.1.0-rc7}"
+ref="${FIXPLIZZ_REF:-v0.1.0-rc8}"
 target="${FIXPLIZZ_PATH:-$HOME/.local/share/fixplizz}"
 state_home="${FIXPLIZZ_STATE_HOME:-$HOME/.local/state/fixplizz}"
 bin_home="${FIXPLIZZ_BIN_HOME:-$HOME/.local/bin}"
@@ -110,7 +110,10 @@ if [[ -n ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
   git clone --quiet --no-local "$FIXPLIZZ_BOOT_SOURCE" "$checkout"
   git -C "$checkout" checkout --quiet "$ref"
 else
-  git clone --quiet --depth 1 --branch "$ref" "https://github.com/$repo.git" "$checkout"
+  git -c init.defaultBranch=main init --quiet "$checkout"
+  git -C "$checkout" remote add origin "https://github.com/$repo.git"
+  git -C "$checkout" fetch --quiet --depth 1 origin "refs/tags/$ref"
+  git -C "$checkout" -c advice.detachedHead=false checkout --quiet --detach FETCH_HEAD
 fi
 
 mkdir -p "$(dirname -- "$target")" "$state_home/backups" "$bin_home"
