@@ -71,6 +71,11 @@ fixplizz_print_success_summary() {
     done < <(fixplizz_profile_modules "$profile")
     printf 'Logout required: %s\n' "$logout_required"
     printf 'Reboot required: %s\n' "$reboot_required"
+    if [[ -z ${FIXPLIZZ_RUNTIMES:-} ]]; then
+      printf 'Optional runtimes: fixplizz runtime menu\n'
+    else
+      printf 'Optional runtimes installed: %s\n' "$FIXPLIZZ_RUNTIMES"
+    fi
     printf 'Full log: %s\n' "$full_log"
     printf '============================================================\n'
   } | tee -a "$run_log"
@@ -95,6 +100,10 @@ fixplizz_run_profile() {
       return 4
     }
     source_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+    if [[ -z ${FIXPLIZZ_RUNTIMES:-} ]]; then
+      FIXPLIZZ_RUNTIMES="$(fixplizz_read_run_runtimes "$source_run")"
+      export FIXPLIZZ_RUNTIMES
+    fi
   fi
 
   mkdir -p "$FIXPLIZZ_STATE_HOME"

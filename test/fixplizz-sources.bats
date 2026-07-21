@@ -209,7 +209,7 @@ SH
   mkdir -p "$HOME/.local/share/mise/shims" "$FIXPLIZZ_BIN_HOME"
   cat >"$FIXPLIZZ_BIN_HOME/mise" <<'SH'
 #!/bin/sh
-exit 0
+printf '%s\n' "$*" >>"$MISE_LOG"
 SH
   cat >"$HOME/.local/share/mise/shims/npm" <<'SH'
 #!/bin/sh
@@ -221,11 +221,13 @@ printf '%s\n' "$*" >>"$COREPACK_LOG"
 SH
   chmod +x "$FIXPLIZZ_BIN_HOME/mise" "$HOME/.local/share/mise/shims/npm" "$FIXPLIZZ_BIN_HOME/corepack"
 
-  run env NPM_LOG="$npm_log" COREPACK_LOG="$corepack_log" bash -c "source '$ROOT/modules/developer.sh' plan >/dev/null; fixplizz_install_binary() { :; }; fixplizz_install_tar_binary() { :; }; module_apply_custom"
+  run env PATH="$FIXPLIZZ_BIN_HOME:$PATH" FIXPLIZZ_RUNTIMES='bun java' NPM_LOG="$npm_log" COREPACK_LOG="$corepack_log" MISE_LOG="$BATS_TEST_TMPDIR/mise.log" bash -c "source '$ROOT/modules/developer.sh' plan >/dev/null; fixplizz_install_binary() { :; }; fixplizz_install_tar_binary() { :; }; module_apply_custom"
   [ "$status" -eq 0 ]
   grep -Fq "install --global --prefix $HOME/.local corepack@0.35.0 typescript@7.0.2 tsx@4.23.1 eslint@10.7.0 prettier@3.9.5 vitest@4.1.10" "$npm_log"
   grep -Fxq "prepare pnpm@11.15.0 --activate" "$corepack_log"
   grep -Fxq "prepare yarn@4.17.1 --activate" "$corepack_log"
+  grep -Fxq 'use --global bun@latest' "$BATS_TEST_TMPDIR/mise.log"
+  grep -Fxq 'use --global java@temurin-25' "$BATS_TEST_TMPDIR/mise.log"
 }
 
 @test "terminal and AI plans include pinned herdr and Hermes Agent" {

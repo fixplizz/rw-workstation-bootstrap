@@ -23,7 +23,7 @@ json_query() {
 @test "fixplizz version renders version" {
   run "$CLI" version
   [ "$status" -eq 0 ]
-  [ "$output" = "Fixplizz Workstation 0.1.0-rc5" ]
+  [ "$output" = "Fixplizz Workstation 0.1.0-rc6" ]
 }
 
 @test "fixplizz commands lists PR1 commands" {
@@ -161,4 +161,32 @@ SH
   [ "$status" -eq 2 ]
   [[ "$output" == *"Unsupported runtime: cobol"* ]]
   [ ! -e "$mise_log" ]
+}
+
+@test "runtime menu converts numbered choices to canonical runtime names" {
+  run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_RUNTIME_MENU_INPUT='1,3,8' "$CLI" runtime menu --print
+  [ "$status" -eq 0 ]
+  [ "$output" = "bun java zig" ]
+}
+
+@test "runtime menu rejects invalid numbered choices" {
+  run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_RUNTIME_MENU_INPUT='1,9' "$CLI" runtime menu --print
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Invalid runtime menu choice: 9"* ]]
+}
+
+@test "runtime menu installs selected choices through the normal installer" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mise_log="$BATS_TEST_TMPDIR/mise.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/mise" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$MISE_LOG"
+SH
+  chmod +x "$fake_bin/mise"
+
+  run env PATH="$fake_bin:$PATH" MISE_LOG="$mise_log" FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_RUNTIME_MENU_INPUT='2,4' "$CLI" runtime menu
+  [ "$status" -eq 0 ]
+  grep -Fxq 'use --global deno@latest' "$mise_log"
+  grep -Fxq 'use --global dotnet@latest' "$mise_log"
 }

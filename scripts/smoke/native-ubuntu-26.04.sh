@@ -35,14 +35,14 @@ smoke_fail() {
 }
 
 smoke_require_ref() {
-  [[ -n ${FIXPLIZZ_SMOKE_REF:-} ]] || smoke_fail 2 'FIXPLIZZ_SMOKE_REF is required (for example v0.1.0-rc5).'
+  [[ -n ${FIXPLIZZ_SMOKE_REF:-} ]] || smoke_fail 2 'FIXPLIZZ_SMOKE_REF is required (for example v0.1.0-rc6).'
   case "$FIXPLIZZ_SMOKE_REF" in
     main | master | latest | refs/heads/* | */latest | *latest/*)
       smoke_fail 2 "FIXPLIZZ_SMOKE_REF must be an immutable release tag, not $FIXPLIZZ_SMOKE_REF."
       ;;
   esac
   [[ $FIXPLIZZ_SMOKE_REF =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$ ]] ||
-    smoke_fail 2 'FIXPLIZZ_SMOKE_REF must be an immutable RC tag such as v0.1.0-rc5.'
+    smoke_fail 2 'FIXPLIZZ_SMOKE_REF must be an immutable RC tag such as v0.1.0-rc6.'
 }
 
 smoke_os_field() {

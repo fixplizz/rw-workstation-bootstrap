@@ -47,6 +47,25 @@ PY
   [[ "$output" == *"Unknown Fixplizz profile"* ]]
 }
 
+@test "install dry-run accepts explicit optional runtimes" {
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" install --runtimes bun,java --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Optional runtimes: bun java"* ]]
+}
+
+@test "install runtime menu resolves choices before the plan" {
+  run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_RUNTIME_MENU_INPUT='1,8' "$CLI" install --runtime-menu --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Optional runtimes: bun zig"* ]]
+}
+
+@test "install rejects unknown runtimes before creating state" {
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" install --runtimes cobol --dry-run
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"Unsupported runtime: cobol"* ]]
+  [ ! -e "$FIXPLIZZ_STATE_HOME" ]
+}
+
 @test "mvp dry-run prints the complete module plan without mutation" {
   run env FIXPLIZZ_TEST_MODE=1 "$CLI" install --profile mvp --dry-run
   [ "$status" -eq 0 ]
@@ -119,6 +138,24 @@ assert json.loads((run / "modules/remote-base.json").read_text())["status"] == "
 PY
 }
 
+@test "resume preserves optional runtime selection from the failed run" {
+  run env FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_TEST_FAIL_MODULE=terminal \
+    "$CLI" install --runtimes bun,java
+  [ "$status" -ne 0 ]
+  failed_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" resume
+  [ "$status" -eq 0 ]
+  resumed_run="$(<"$FIXPLIZZ_STATE_HOME/current-run")"
+  python - "$FIXPLIZZ_STATE_HOME/runs/$failed_run/run.json" "$FIXPLIZZ_STATE_HOME/runs/$resumed_run/run.json" <<'PY'
+import json, pathlib, sys
+failed = json.loads(pathlib.Path(sys.argv[1]).read_text())
+resumed = json.loads(pathlib.Path(sys.argv[2]).read_text())
+assert failed["optional_runtimes"] == "bun java"
+assert resumed["optional_runtimes"] == "bun java"
+PY
+}
+
 @test "failure injection is disabled unless explicit test mode is enabled" {
   run env FIXPLIZZ_TEST_FAIL_MODULE=core bash -c \
     "source '$ROOT/install/helpers/runner.sh' && fixplizz_should_inject_failure core"
@@ -139,4 +176,10 @@ assert data["status"] == "completed"
 assert data["installed_version"] == expected_version
 assert data["source"] == "profile:core"
 PY
+}
+
+@test "default install points users to the optional runtime menu" {
+  run env FIXPLIZZ_TEST_MODE=1 "$CLI" install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Optional runtimes: fixplizz runtime menu"* ]]
 }

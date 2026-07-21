@@ -46,11 +46,21 @@ fixplizz_create_run() {
   fixplizz_json_write "$run_dir/run.json" \
     "id=$run_id" \
     "profile=$profile" \
+    "optional_runtimes=${FIXPLIZZ_RUNTIMES:-}" \
     "status=running" \
     "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     "resumed_from=${resumed_from:-@null}"
   printf '%s\n' "$run_id" >"$FIXPLIZZ_STATE_HOME/current-run"
   printf '%s\n' "$run_id"
+}
+
+fixplizz_read_run_runtimes() {
+  local path="$FIXPLIZZ_STATE_HOME/runs/$1/run.json"
+  [[ -r $path ]] || return 1
+  python - "$path" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("optional_runtimes", ""))
+PY
 }
 
 fixplizz_module_state_path() {

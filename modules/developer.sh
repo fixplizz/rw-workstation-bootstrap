@@ -9,6 +9,7 @@ VERIFY_COMMANDS=(gh mise uv node npm npx corepack pnpm yarn tsc tsx eslint prett
 PLANNED_ACTIONS=('install GitHub CLI from Ubuntu' 'install pinned mise and uv artifacts' 'install Node.js LTS through mise' 'install pinned Corepack, pnpm, and Yarn in the user prefix' 'install pinned TypeScript, tsx, ESLint, Prettier, and Vitest in the user prefix' 'install native Node.js build prerequisites: clang, CMake, pkg-config, and Python headers' 'install Ubuntu Rust toolchain without modifying system Python')
 module_apply_custom() {
   local npm_binary corepack_binary
+  local -a selected_runtimes
   [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 ]] && return 0
   fixplizz_install_binary mise "$MISE_URL" "$MISE_SHA256" mise
   fixplizz_install_tar_binary uv "$UV_URL" "$UV_SHA256" uv-x86_64-unknown-linux-gnu/uv uv
@@ -25,5 +26,9 @@ module_apply_custom() {
   "$corepack_binary" enable --install-directory "$FIXPLIZZ_BIN_HOME"
   "$corepack_binary" prepare "pnpm@$PNPM_VERSION" --activate
   "$corepack_binary" prepare "yarn@$YARN_VERSION" --activate
+  if [[ -n ${FIXPLIZZ_RUNTIMES:-} ]]; then
+    read -r -a selected_runtimes <<<"$FIXPLIZZ_RUNTIMES"
+    "$ROOT/bin/fixplizz-runtime" install "${selected_runtimes[@]}"
+  fi
 }
 source "$ROOT/install/helpers/module.sh"

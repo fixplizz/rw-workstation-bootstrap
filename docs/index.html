@@ -180,13 +180,13 @@
     <main>
       <section class="hero">
         <div>
-          <span class="eyebrow">Release Candidate · v0.1.0-rc5</span>
+          <span class="eyebrow">Release Candidate · v0.1.0-rc6</span>
           <h1>Your Ubuntu workstation, ready.</h1>
           <p class="lede">Install a consistent development, DevOps, AI, daily work, and remote-access setup on Ubuntu 26.04 Desktop amd64.</p>
 
           <div class="install-card">
             <p class="install-label">Run as your regular user</p>
-            <pre class="command"><code id="install-command">bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'</code><button class="copy" id="copy-install" type="button">Copy</button></pre>
+            <pre class="command"><code id="install-command">bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash'</code><button class="copy" id="copy-install" type="button">Copy</button></pre>
             <p class="install-note" id="copy-status" aria-live="polite">The installer requests sudo only for system operations.</p>
           </div>
         </div>
@@ -216,8 +216,8 @@
 
       <section>
         <div class="recovery">
-          <div><h2>Continue after an interruption</h2><p>Fixplizz skips completed modules and retries the failed step.</p></div>
-          <code class="resume">fixplizz resume</code>
+          <div><h2>Continue or add runtimes</h2><p>Resume an interrupted installation, or open the optional runtime menu at any time.</p></div>
+          <code class="resume">fixplizz resume · fixplizz runtime menu</code>
         </div>
       </section>
     </main>

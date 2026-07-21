@@ -10,15 +10,27 @@
 Fixplizz turns a clean Ubuntu desktop into a consistent workstation for software development, infrastructure work, AI-assisted coding, daily applications, and remote access.
 
 > [!WARNING]
-> **Release Candidate:** `v0.1.0-rc5` adds the requested Hermes/herdr agent workspace and selectable development runtimes. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
+> **Release Candidate:** `v0.1.0-rc6` provides the short installer URL and runtime selection during installation. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
 ## One-command installation
 
 ```bash
-bash -c 'set -o pipefail; curl -fsSL --retry 3 https://fixplizz.github.io/rw-workstation-bootstrap/install | bash'
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash'
 ```
 
 Run this command as your regular desktop user. Fixplizz requests `sudo` only for system operations. You do not need to clone the repository or verify a checksum by hand. The installer uses the `mvp` profile in noninteractive mode by default.
+
+Choose optional runtimes during the same installation:
+
+```bash
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash -s -- --runtime-menu'
+```
+
+For a fully noninteractive selection, pass comma-separated names:
+
+```bash
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash -s -- --runtimes bun,deno,java,dotnet'
+```
 
 If installation stops, continue from the last incomplete module:
 
@@ -76,6 +88,7 @@ fixplizz commands
 fixplizz resume
 fixplizz install --profile mvp --dry-run
 fixplizz runtime list
+fixplizz runtime menu
 fixplizz runtime install bun deno
 ```
 
@@ -112,10 +125,10 @@ On failure, Fixplizz prints the stage or module, exit code, full log path, and t
 
 ### Technical fallback
 
-If GitHub Pages is unavailable, run the immutable RC5 bootstrap from GitHub Raw:
+If the short endpoint is unavailable, run the immutable RC6 bootstrap from GitHub Raw:
 
 ```bash
-bash -c 'set -o pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc5/boot.sh | bash'
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc6/boot.sh | bash'
 ```
 
 ## Safety boundaries
@@ -151,11 +164,11 @@ Maintainer and architecture documentation:
 
 ## Release status
 
-**Current release:** `v0.1.0-rc5`
+**Current release:** `v0.1.0-rc6`
 
 Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
-See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc5).
+See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc6).
 
 ## License and attribution
 
