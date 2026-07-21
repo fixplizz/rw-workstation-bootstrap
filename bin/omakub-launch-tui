@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# omakub:summary=Launch a TUI command in the default terminal.
+# omakub:args=<command> [args...]
+
+exec xdg-terminal-exec "$1" "${@:2}"

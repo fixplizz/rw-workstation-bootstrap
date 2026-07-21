@@ -1,0 +1,25 @@
+# Editor used by CLI
+export EDITOR="nvim"
+export SUDO_EDITOR="$EDITOR"
+
+# Fix BAT theme
+export BAT_THEME=ansi
+
+# Color man pages with bat
+export MANROFFOPT="-c"
+export MANPAGER="sh -c 'col -bx | batcat -l man -p'"
+
+# Fix Alacritty cursor display issues
+export XCURSOR_THEME="Yaru"
+
+# Terminal
+export TERMINAL=xdg-terminal-exec
+
+# Gum
+if [ -f "$HOME/.config/omakub/current/theme/gum.env" ]; then
+  source $HOME/.config/omakub/current/theme/gum.env
+fi
+
+# Omabuntu
+export OMAKUB_PATH=$HOME/.local/share/omakub
+export PATH=$OMAKUB_PATH/bin:$PATH:$HOME/.local/bin

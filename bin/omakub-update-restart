@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# omakub:summary=Prompt for required reboot or service restarts after updates.
+
+if [[ -f $HOME/.local/state/omakub/reboot-required ]]; then
+  echo
+  gum confirm "Updates require reboot. Ready?" && omakub-system-reboot
+fi
+
+for file in "$HOME"/.local/state/omakub/restart-*-required; do
+  if [[ -f $file ]]; then
+    filename=$(basename "$file")
+    service=$(echo "$filename" | sed 's/restart-\(.*\)-required/\1/')
+    echo "Restarting $service"
+    omakub-state clear "$filename"
+    omakub-restart-"$service"
+  fi
+done

@@ -1,0 +1,7 @@
+[org/gnome/login-screen]
+logo='/usr/share/pixmaps/omakub/gdm-logo.png'
+
+[com/ubuntu/login-screen]
+background-picture-uri='file:///usr/share/pixmaps/omakub/gdm-background.png'
+background-picture-uri-dark='file:///usr/share/pixmaps/omakub/gdm-background.png'
+background-size='zoom'

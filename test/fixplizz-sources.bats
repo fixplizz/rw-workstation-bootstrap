@@ -1,0 +1,300 @@
+#!/usr/bin/env bats
+
+setup() {
+  export ROOT="$BATS_TEST_DIRNAME/.."
+  export HOME="$BATS_TEST_TMPDIR/home with spaces"
+  export FIXPLIZZ_STATE_HOME="$BATS_TEST_TMPDIR/state"
+  export FIXPLIZZ_CONFIG_HOME="$BATS_TEST_TMPDIR/config"
+  export FIXPLIZZ_BIN_HOME="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$HOME" "$FIXPLIZZ_STATE_HOME" "$FIXPLIZZ_CONFIG_HOME" "$FIXPLIZZ_BIN_HOME"
+}
+
+@test "deb822 renderer uses HTTPS and a dedicated Signed-By keyring" {
+  run bash -c "source '$ROOT/install/helpers/repositories.sh'; fixplizz_render_deb822 docker https://download.docker.com/linux/ubuntu resolute stable /etc/apt/keyrings/docker.asc"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Types: deb"* ]]
+  [[ "$output" == *"URIs: https://download.docker.com/linux/ubuntu"* ]]
+  [[ "$output" == *"Suites: resolute"* ]]
+  [[ "$output" == *"Signed-By: /etc/apt/keyrings/docker.asc"* ]]
+}
+
+@test "deb822 renderer rejects non-HTTPS repositories" {
+  run bash -c "source '$ROOT/install/helpers/repositories.sh'; fixplizz_render_deb822 bad http://example.test stable main /etc/apt/keyrings/bad.asc"
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"No such file"* ]]
+  [[ "$output" != *"command not found"* ]]
+}
+
+@test "checksum verification accepts exact sha256 and rejects mismatch" {
+  artifact="$BATS_TEST_TMPDIR/artifact"
+  printf 'fixplizz\n' >"$artifact"
+  expected="$(sha256sum "$artifact" | awk '{print $1}')"
+  run bash -c "source '$ROOT/install/helpers/checksum.sh'; fixplizz_verify_sha256 '$artifact' '$expected'"
+  [ "$status" -eq 0 ]
+  run bash -c "source '$ROOT/install/helpers/checksum.sh'; fixplizz_verify_sha256 '$artifact' '0000000000000000000000000000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+}
+
+@test "managed symlink backs up a conflicting user file" {
+  target="$BATS_TEST_TMPDIR/target"
+  link="$FIXPLIZZ_BIN_HOME/tool"
+  printf 'target\n' >"$target"
+  printf 'user file\n' >"$link"
+  run bash -c "source '$ROOT/install/helpers/files.sh'; fixplizz_managed_symlink '$target' '$link'"
+  [ "$status" -eq 0 ]
+  if [[ $(uname -s) == MINGW* ]]; then
+    [ -f "$link" ]
+  else
+    [ -L "$link" ]
+  fi
+  backup_count="$(find "$FIXPLIZZ_STATE_HOME/backups" -type f | wc -l | tr -d ' ')"
+  [ "$backup_count" -eq 1 ]
+}
+
+@test "shell integration adds one marked source line and preserves a backup" {
+  rc="$HOME/.bashrc"
+  printf 'export EXISTING=1\n' >"$rc"
+  run bash -c "source '$ROOT/install/helpers/files.sh'; fixplizz_install_shell_integration '$rc'"
+  [ "$status" -eq 0 ]
+  run bash -c "source '$ROOT/install/helpers/files.sh'; fixplizz_install_shell_integration '$rc'"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'FIXPLIZZ MANAGED SHELL' "$rc")" -eq 1 ]
+  [ -f "$FIXPLIZZ_CONFIG_HOME/shell/init.sh" ]
+  [ "$(find "$FIXPLIZZ_STATE_HOME/backups" -type f | wc -l | tr -d ' ')" -eq 1 ]
+}
+
+@test "module files expose all four lifecycle phases" {
+  for module in core desktop terminal developer devops-base ai-base daily-base remote-base; do
+    for phase in plan check apply verify; do
+      run env FIXPLIZZ_TEST_MODE=1 "$ROOT/modules/$module.sh" "$phase"
+      if [[ $phase == check ]]; then
+        continue
+      fi
+      [ "$status" -eq 0 ]
+    done
+  done
+}
+
+@test "RC source manifest pins HTTPS amd64 artifacts and SHA256 values" {
+  [ -f "$ROOT/config/sources.rc" ]
+  run bash -c "source '$ROOT/config/sources.rc'; fixplizz_validate_sources"
+  [ "$status" -eq 0 ]
+  ! grep -Eqi '(^|[/=-])latest([/._-]|$)|http://' "$ROOT/config/sources.rc"
+}
+
+@test "Orca source is pinned to the official immutable amd64 deb" {
+  source "$ROOT/config/sources.rc"
+  [ "$ORCA_VERSION" = "1.4.148" ]
+  [ "$ORCA_URL" = "https://github.com/stablyai/orca/releases/download/v1.4.148/orca-ide_1.4.148_amd64.deb" ]
+  [ "$ORCA_SHA256" = "1a2e0defd45584058c394dcea3f709a3953e3bab0530c089ffc25ee3c3c995ac" ]
+}
+
+@test "artifact installer rejects a checksum mismatch before installation" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf 'not trusted\n' >"$fixture"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '0000000000000000000000000000000000000000000000000000000000000000' demo"
+  [ "$status" -ne 0 ]
+  [ ! -e "$FIXPLIZZ_BIN_HOME/demo" ]
+}
+
+@test "artifact installer verifies before copying into user bin" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf '#!/bin/sh\necho demo\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" FIXPLIZZ_TEST_MODE=1 bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  [ -x "$FIXPLIZZ_BIN_HOME/demo" ]
+}
+
+@test "Deb artifact installer verifies the exact package before apt execution" {
+  fixture="$BATS_TEST_TMPDIR/orca.deb"
+  sudo_log="$BATS_TEST_TMPDIR/sudo.log"
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mkdir -p "$fake_bin"
+  printf 'verified orca deb\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  cat >"$fake_bin/sudo" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SUDO_LOG"
+SH
+  chmod +x "$fake_bin/sudo"
+
+  run env PATH="$fake_bin:$PATH" SUDO_LOG="$sudo_log" FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_deb_artifact orca https://example.test/orca.deb '$expected'"
+  [ "$status" -eq 0 ]
+  grep -Eq '^apt-get install -y --no-install-recommends /.*fixplizz-orca\..*\.deb$' "$sudo_log"
+  [ -f "$FIXPLIZZ_STATE_HOME/artifacts/orca.sha256" ]
+}
+
+@test "Deb artifact checksum mismatch prevents apt execution" {
+  fixture="$BATS_TEST_TMPDIR/orca.deb"
+  sudo_log="$BATS_TEST_TMPDIR/sudo.log"
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mkdir -p "$fake_bin"
+  printf 'untrusted orca deb\n' >"$fixture"
+  cat >"$fake_bin/sudo" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SUDO_LOG"
+SH
+  chmod +x "$fake_bin/sudo"
+
+  run env PATH="$fake_bin:$PATH" SUDO_LOG="$sudo_log" FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_deb_artifact orca https://example.test/orca.deb '0000000000000000000000000000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [ ! -e "$sudo_log" ]
+  [ ! -e "$FIXPLIZZ_STATE_HOME/artifacts/orca.sha256" ]
+}
+
+@test "compatible verified artifact is not downloaded or replaced twice" {
+  fixture="$BATS_TEST_TMPDIR/download"
+  printf '#!/bin/sh\necho demo\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  first_mtime="$(stat -c %Y "$FIXPLIZZ_BIN_HOME/demo")"
+  rm "$fixture"
+  sleep 1
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
+  [ "$status" -eq 0 ]
+  [ "$(stat -c %Y "$FIXPLIZZ_BIN_HOME/demo")" = "$first_mtime" ]
+}
+
+@test "compatible pinned Codex CLI is not installed twice" {
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  npm_log="$BATS_TEST_TMPDIR/npm.log"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/codex" <<'SH'
+#!/bin/sh
+echo 'codex-cli 0.144.6'
+SH
+  cat >"$fake_bin/npm" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+SH
+  chmod +x "$fake_bin/codex" "$fake_bin/npm"
+
+  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; fixplizz_install_deb_artifact() { :; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  [ ! -e "$npm_log" ]
+}
+
+@test "Hermes wheel checksum mismatch prevents uv tool installation" {
+  fixture="$BATS_TEST_TMPDIR/hermes.whl"
+  uv_log="$BATS_TEST_TMPDIR/uv.log"
+  fake_uv="$FIXPLIZZ_BIN_HOME/uv"
+  printf 'not trusted\n' >"$fixture"
+  cat >"$fake_uv" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$UV_LOG"
+SH
+  chmod +x "$fake_uv"
+
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" UV_LOG="$uv_log" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_uv_tool hermes-agent https://example.test/hermes.whl '0000000000000000000000000000000000000000000000000000000000000000' 3.13 hermes"
+  [ "$status" -ne 0 ]
+  [ ! -e "$uv_log" ]
+  [ ! -e "$FIXPLIZZ_BIN_HOME/hermes" ]
+}
+
+@test "Hermes installs from the exact checksum-verified wheel through uv" {
+  fixture="$BATS_TEST_TMPDIR/hermes.whl"
+  uv_log="$BATS_TEST_TMPDIR/uv.log"
+  fake_uv="$FIXPLIZZ_BIN_HOME/uv"
+  printf 'verified hermes wheel\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  cat >"$fake_uv" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$UV_LOG"
+mkdir -p "$FIXPLIZZ_BIN_HOME"
+printf '#!/bin/sh\nexit 0\n' >"$FIXPLIZZ_BIN_HOME/hermes"
+chmod +x "$FIXPLIZZ_BIN_HOME/hermes"
+SH
+  chmod +x "$fake_uv"
+
+  run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" UV_LOG="$uv_log" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_uv_tool hermes-agent https://example.test/hermes.whl '$expected' 3.13 hermes"
+  [ "$status" -eq 0 ]
+  [ -x "$FIXPLIZZ_BIN_HOME/hermes" ]
+  grep -Eq '^tool install --python 3\.13 --force /.*fixplizz-hermes-agent\..*\.whl$' "$uv_log"
+}
+
+@test "managed shell integration provides stable h and agents aliases" {
+  rc="$HOME/.bashrc"
+  touch "$rc"
+  run bash -c "source '$ROOT/install/helpers/files.sh'; fixplizz_install_shell_integration '$rc'"
+  [ "$status" -eq 0 ]
+  grep -Fxq "alias h='hermes'" "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+  grep -Fxq "alias agents='herdr'" "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+  grep -Fq '$HOME/.local/share/mise/shims' "$FIXPLIZZ_CONFIG_HOME/shell/init.sh"
+}
+
+@test "developer plan includes complete Node.js application toolchain" {
+  run "$ROOT/modules/developer.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *$'package\tubuntu\tclang'* ]]
+  [[ "$output" == *$'package\tubuntu\tcmake'* ]]
+  [[ "$output" == *"TypeScript"* ]]
+  [[ "$output" == *"Yarn"* ]]
+  [[ "$output" == *"Vitest"* ]]
+}
+
+@test "Fixplizz environment exposes user CLI and mise shims immediately" {
+  run bash -c "source '$ROOT/install/helpers/fixplizz-env.sh'; printf '%s\n' \"\$PATH\""
+  [ "$status" -eq 0 ]
+  [[ ":$output:" == *":$FIXPLIZZ_BIN_HOME:"* ]]
+  [[ ":$output:" == *":$HOME/.local/share/mise/shims:"* ]]
+}
+
+@test "Node and Codex npm installs are user-scoped global CLI installs" {
+  grep -Fq 'install --global --prefix "$HOME/.local"' "$ROOT/modules/developer.sh"
+  grep -Fq 'install --global --prefix "$HOME/.local"' "$ROOT/modules/ai-base.sh"
+  ! grep -REq 'sudo[[:space:]]+npm' "$ROOT/modules/developer.sh" "$ROOT/modules/ai-base.sh"
+}
+
+@test "developer module invokes pinned user-scoped Node CLI installation" {
+  npm_log="$BATS_TEST_TMPDIR/node-npm.log"
+  corepack_log="$BATS_TEST_TMPDIR/corepack.log"
+  mkdir -p "$HOME/.local/share/mise/shims" "$FIXPLIZZ_BIN_HOME"
+  cat >"$FIXPLIZZ_BIN_HOME/mise" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$MISE_LOG"
+SH
+  cat >"$HOME/.local/share/mise/shims/npm" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+SH
+  cat >"$FIXPLIZZ_BIN_HOME/corepack" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$COREPACK_LOG"
+SH
+  chmod +x "$FIXPLIZZ_BIN_HOME/mise" "$HOME/.local/share/mise/shims/npm" "$FIXPLIZZ_BIN_HOME/corepack"
+
+  run env PATH="$FIXPLIZZ_BIN_HOME:$PATH" FIXPLIZZ_RUNTIMES='bun java' NPM_LOG="$npm_log" COREPACK_LOG="$corepack_log" MISE_LOG="$BATS_TEST_TMPDIR/mise.log" bash -c "source '$ROOT/modules/developer.sh' plan >/dev/null; fixplizz_install_binary() { :; }; fixplizz_install_tar_binary() { :; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  grep -Fq "install --global --prefix $HOME/.local corepack@0.35.0 typescript@7.0.2 tsx@4.23.1 eslint@10.7.0 prettier@3.9.5 vitest@4.1.10" "$npm_log"
+  grep -Fxq "prepare pnpm@11.15.0 --activate" "$corepack_log"
+  grep -Fxq "prepare yarn@4.17.1 --activate" "$corepack_log"
+  grep -Fxq 'use --global bun@latest' "$BATS_TEST_TMPDIR/mise.log"
+  grep -Fxq 'use --global java@temurin-25' "$BATS_TEST_TMPDIR/mise.log"
+}
+
+@test "terminal and AI plans include pinned herdr and Hermes Agent" {
+  run "$ROOT/modules/terminal.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"herdr"* ]]
+  run "$ROOT/modules/ai-base.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Hermes Agent"* ]]
+}
+
+@test "AI module installs Orca and manages telemetry opt-out" {
+  run "$ROOT/modules/ai-base.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Orca"* ]]
+
+  run env HOME="$HOME" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; npm() { :; }; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; fixplizz_install_deb_artifact() { printf '%s %s %s\n' \"\$1\" \"\$2\" \"\$3\" >'$BATS_TEST_TMPDIR/orca-install.log'; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  grep -Fq 'orca https://github.com/stablyai/orca/releases/download/v1.4.148/orca-ide_1.4.148_amd64.deb 1a2e0defd45584058c394dcea3f709a3953e3bab0530c089ffc25ee3c3c995ac' "$BATS_TEST_TMPDIR/orca-install.log"
+  [ "$(cat "$HOME/.config/environment.d/90-fixplizz-orca.conf")" = 'ORCA_TELEMETRY_DISABLED=1' ]
+}
+
+@test "MVP modules keep credential and system safety boundaries" {
+  run grep -RInE 'sudo[[:space:]]+npm|apt-key|flatpak[[:space:]]+install[[:space:]]+(--system[[:space:]]+)?[^-]|systemctl[[:space:]]+enable[[:space:]]+ssh|apparmor.*(disable|stop)|rustdesk.*password|netbird[[:space:]]+up' "$ROOT/modules" "$ROOT/install/helpers"
+  [ "$status" -eq 1 ]
+}

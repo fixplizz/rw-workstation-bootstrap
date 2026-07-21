@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# fixplizz:group=resume
+# fixplizz:summary=Continue the last interrupted MVP installation
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+exec "$ROOT/bin/fixplizz-install" --profile mvp --resume --noninteractive "$@"

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# omakub:summary=Pull the latest Omabuntu git changes.
+
+set -e
+
+echo -e "\e[32mUpdate Omabuntu\e[0m"
+
+git -C $OMAKUB_PATH pull --autostash
+git -C $OMAKUB_PATH --no-pager diff --check || git -C $OMAKUB_PATH reset --merge

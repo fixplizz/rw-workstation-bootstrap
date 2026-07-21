@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# omakub:summary=Install APT packages with apt-get if they are missing.
+# omakub:group=install
+# omakub:name=package
+# omakub:args=<packages...>
+# omakub:examples=omakub pkg add jq ripgrep
+# omakub:requires-sudo=true
+
+if omakub-pkg-missing "$@"; then
+  sudo apt-get -y install "$@" || exit 1
+fi
+
+for pkg in "$@"; do
+  # Secondary check to handle states where dpkg doesn't actually register an error
+  if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "^install ok installed"; then
+    echo -e "\033[31mError: Package '$pkg' did not install\033[0m" >&2
+    exit 1
+  fi
+done
+
+exit 0

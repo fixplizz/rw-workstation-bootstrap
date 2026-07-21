@@ -1,0 +1,13 @@
+# History control
+shopt -s histappend
+HISTCONTROL=ignoreboth
+HISTSIZE=32768
+HISTFILESIZE="${HISTSIZE}"
+
+# Autocompletion
+source /usr/share/bash-completion/bash_completion
+
+# Set complete path
+export OMAKUB_PATH="$HOME/.local/share/omakub"
+export PATH="$OMAKUB_PATH/bin:$PATH"
+set +h

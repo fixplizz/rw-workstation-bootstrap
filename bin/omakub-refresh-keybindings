@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# omakub:summary=Refresh the GNOME keybindings to Omabuntu defaults.
+
+source ~/.local/share/omakub/install/config/gnome/hotkeys.sh

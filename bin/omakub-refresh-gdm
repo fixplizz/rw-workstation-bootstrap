@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# omakub:summary=Overwrite the GDM theme with the Omabuntu default.
+# omakub:requires-sudo=true
+
+exec omakub-gdm-reset

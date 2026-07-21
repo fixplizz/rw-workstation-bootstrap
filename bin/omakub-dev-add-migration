@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# omakub:summary=Creates a new Omabuntu migration named after the unix timestamp of the last commit.
+
+cd ~/.local/share/omakub
+migration_file="$HOME/.local/share/omakub/migrations/$(git log -1 --format=%cd --date=unix).sh"
+touch $migration_file
+
+if [[ "$1" != "--no-edit" ]]; then
+  $EDITOR $migration_file
+fi
+
+echo $migration_file
+

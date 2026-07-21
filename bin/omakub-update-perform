@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# omakub:summary=Run the full Omabuntu update pipeline.
+# omakub:requires-sudo=true
+
+set -e
+
+# Capture update logs (CLICOLOR_FORCE keeps gum styled when stdout is piped through tee)
+export CLICOLOR_FORCE=1
+exec > >(tee "/tmp/omakub-update.log") 2>&1
+
+omakub-update-keyring
+omakub-update-system-pkgs
+omakub-update-gnome-extensions
+omakub-migrate
+omakub-hook post-update
+omakub-update-restart
+omakub-update-logout

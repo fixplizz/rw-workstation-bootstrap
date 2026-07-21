@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# omakub:summary=Apply the current theme to GNOME color mode and icon settings.
+# omakub:hidden=true
+
+# Change gnome modes
+GTK_THEME=~/.config/omakub/current/theme/gtk.theme
+GTK_LIGHT_MODE=~/.config/omakub/current/theme/light.mode
+
+if [[ -f $GTK_THEME ]]; then
+  OMAKUB_GTK_THEME=$(<$GTK_THEME)
+else
+  OMAKUB_GTK_THEME="Yaru-blue"
+fi
+
+if [[ -f $GTK_LIGHT_MODE ]]; then
+  gsettings set org.gnome.desktop.interface color-scheme "prefer-light"
+  gsettings set org.gnome.desktop.interface gtk-theme "$OMAKUB_GTK_THEME"
+else
+  gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
+  if [[ -d "/usr/share/themes/${OMAKUB_GTK_THEME}-dark" ]]; then
+    gsettings set org.gnome.desktop.interface gtk-theme "${OMAKUB_GTK_THEME}-dark"
+  else
+    gsettings set org.gnome.desktop.interface gtk-theme "$OMAKUB_GTK_THEME"
+  fi
+fi
+
+# Change gnome accent color
+GNOME_ACCENT_THEME=~/.config/omakub/current/theme/accent.theme
+if [[ -f $GNOME_ACCENT_THEME ]]; then
+  gsettings set org.gnome.desktop.interface accent-color "$(<$GNOME_ACCENT_THEME)" 2>/dev/null || true
+else
+  gsettings set org.gnome.desktop.interface accent-color "orange" 2>/dev/null || true
+fi
+
+# Change gnome cursor theme color
+GNOME_CURSOR_THEME=~/.config/omakub/current/theme/cursor.theme
+if [[ -f $GNOME_CURSOR_THEME ]]; then
+  gsettings set org.gnome.desktop.interface cursor-theme "$(<$GNOME_CURSOR_THEME)"
+else
+  gsettings set org.gnome.desktop.interface cursor-theme "Yaru"
+fi
+
+# Change gnome icon theme color
+GNOME_ICONS_THEME=~/.config/omakub/current/theme/icons.theme
+if [[ -f $GNOME_ICONS_THEME ]]; then
+  gsettings set org.gnome.desktop.interface icon-theme "$(<$GNOME_ICONS_THEME)"
+else
+  gsettings set org.gnome.desktop.interface icon-theme "${OMAKUB_GTK_THEME}"
+fi

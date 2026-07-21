@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# fixplizz:group=runtime
+# fixplizz:summary=List, select, or install optional development runtimes
+# fixplizz:args={list|menu|install NAME...}
+
+set -Eeuo pipefail
+
+declare -A RUNTIME_SPECS=(
+  [bun]='bun@latest'
+  [deno]='deno@latest'
+  [java]='java@temurin-25'
+  [dotnet]='dotnet@latest'
+  [ruby]='ruby@latest'
+  [php]='php@latest'
+  [elixir]='erlang@latest elixir@latest'
+  [zig]='zig@latest'
+)
+RUNTIME_NAMES=(bun deno java dotnet ruby php elixir zig)
+
+show_runtimes() {
+  local name
+  printf 'Optional Fixplizz development runtimes:\n'
+  for name in "${RUNTIME_NAMES[@]}"; do
+    printf '  %-8s %s\n' "$name" "${RUNTIME_SPECS[$name]}"
+  done
+}
+
+normalize_runtimes() {
+  local combined="$*" name
+  local -a names normalized=()
+  local -A seen=()
+  combined="${combined//,/ }"
+  read -r -a names <<<"$combined"
+  for name in "${names[@]}"; do
+    [[ -n $name ]] || continue
+    if [[ -z ${RUNTIME_SPECS[$name]:-} ]]; then
+      printf 'Unsupported runtime: %s\n' "$name" >&2
+      return 2
+    fi
+    if [[ -z ${seen[$name]:-} ]]; then
+      normalized+=("$name")
+      seen["$name"]=1
+    fi
+  done
+  printf '%s\n' "${normalized[*]}"
+}
+
+select_runtimes() {
+  local input token name selected
+  local -a tokens names=()
+  local -A seen=()
+  if [[ -n ${FIXPLIZZ_RUNTIME_MENU_INPUT:-} ]]; then
+    input="$FIXPLIZZ_RUNTIME_MENU_INPUT"
+  else
+    [[ -r /dev/tty && -w /dev/tty ]] || {
+      printf 'Interactive runtime menu requires a terminal. Use --runtimes NAME,... instead.\n' >&2
+      return 2
+    }
+    {
+      printf '\nOptional development runtimes (base already includes Node.js, Python, Go, and Rust):\n'
+      printf '  1) Bun       2) Deno      3) Java      4) .NET\n'
+      printf '  5) Ruby      6) PHP       7) Elixir    8) Zig\n'
+      printf 'Choose numbers or names separated by commas; press Enter to skip: '
+    } >/dev/tty
+    IFS= read -r input </dev/tty
+  fi
+  input="${input//,/ }"
+  read -r -a tokens <<<"$input"
+  for token in "${tokens[@]}"; do
+    case "$token" in
+      1) name=bun ;;
+      2) name=deno ;;
+      3) name=java ;;
+      4) name=dotnet ;;
+      5) name=ruby ;;
+      6) name=php ;;
+      7) name=elixir ;;
+      8) name=zig ;;
+      bun | deno | java | dotnet | ruby | php | elixir | zig) name="$token" ;;
+      '') continue ;;
+      *)
+        printf 'Invalid runtime menu choice: %s\n' "$token" >&2
+        return 2
+        ;;
+    esac
+    if [[ -z ${seen[$name]:-} ]]; then
+      names+=("$name")
+      seen["$name"]=1
+    fi
+  done
+  selected="${names[*]}"
+  printf '%s\n' "$selected"
+}
+
+install_runtimes() {
+  local name mise_binary spec
+  local -a specs
+  (($# > 0)) || {
+    printf 'Usage: fixplizz runtime install NAME...\n' >&2
+    return 2
+  }
+  for name in "$@"; do
+    normalize_runtimes "$name" >/dev/null
+  done
+  mise_binary="$(command -v mise || true)"
+  [[ -n $mise_binary ]] || {
+    printf 'mise is not installed; run the Fixplizz workstation installer first.\n' >&2
+    return 1
+  }
+  for name in "$@"; do
+    printf 'Installing optional runtime: %s\n' "$name"
+    read -r -a specs <<<"${RUNTIME_SPECS[$name]}"
+    for spec in "${specs[@]}"; do
+      "$mise_binary" use --global "$spec"
+    done
+  done
+}
+
+runtime_menu() {
+  local print_only=false selected
+  local -a selected_names
+  if [[ ${1:-} == --print ]]; then
+    print_only=true
+    shift
+  fi
+  (($# == 0)) || {
+    printf 'Usage: fixplizz runtime menu [--print]\n' >&2
+    return 2
+  }
+  selected="$(select_runtimes)"
+  if [[ $print_only == true ]]; then
+    printf '%s\n' "$selected"
+    return 0
+  fi
+  if [[ -z $selected ]]; then
+    printf 'No optional runtimes selected.\n'
+    return 0
+  fi
+  read -r -a selected_names <<<"$selected"
+  install_runtimes "${selected_names[@]}"
+}
+
+case "${1:-}" in
+  list)
+    show_runtimes
+    ;;
+  install)
+    shift
+    install_runtimes "$@"
+    ;;
+  menu)
+    shift
+    runtime_menu "$@"
+    ;;
+  validate)
+    shift
+    normalize_runtimes "$@"
+    ;;
+  *)
+    printf 'Usage: fixplizz runtime {list|menu|install NAME...}\n' >&2
+    exit 2
+    ;;
+esac

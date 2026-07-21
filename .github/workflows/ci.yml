@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck golang-go python3
+      - name: Install pinned shfmt
+        run: |
+          GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
+          echo "$HOME/.local/bin" >>"$GITHUB_PATH"
+      - run: FIXPLIZZ_LINT_ONLY=1 bash test/run.sh
+      - name: Validate GitHub Pages bootstrap
+        run: |
+          cmp --silent boot.sh docs/install
+          bash -n docs/install
+          shellcheck docs/install
+      - run: scripts/ci/policy-scan.sh
+
+  unit:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y bats shellcheck golang-go python3
+      - name: Install pinned shfmt
+        run: |
+          GOBIN="$HOME/.local/bin" go install mvdan.cc/sh/v3/cmd/shfmt@v3.13.1
+          echo "$HOME/.local/bin" >>"$GITHUB_PATH"
+      - run: bash test/run.sh
+
+  integration-headless:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Ubuntu 26.04 gate and non-mutating MVP plan
+        run: |
+          test "$(. /etc/os-release && printf '%s' "$VERSION_ID")" = 26.04
+          FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_OS_RELEASE_FILE=/etc/os-release FIXPLIZZ_TEST_ARCH=x86_64 \
+            bin/fixplizz install --profile mvp --dry-run
+          FIXPLIZZ_TEST_MODE=1 FIXPLIZZ_OS_RELEASE_FILE=/etc/os-release FIXPLIZZ_TEST_ARCH=x86_64 \
+            bin/fixplizz install --profile mvp --noninteractive
+          bin/fixplizz status --json | python3 -m json.tool >/dev/null
+
+  secrets-boundary:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: scripts/ci/secrets-boundary.sh

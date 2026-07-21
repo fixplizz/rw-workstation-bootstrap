@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# omakub:summary=Launch a floating terminal with the Omabuntu presentation wrapper.
+# omakub:args=<command>
+
+cmd="$*"
+xdg-terminal-exec bash -c "omakub-show-logo; $cmd; if [ \$? -ne 130 ]; then omakub-show-done; fi"

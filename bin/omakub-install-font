@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# omakub:summary=Install a font for use in the terminal and code editor.
+# omakub:args=<font>
+# omakub:examples=omakub-install-font jetbrains-mono
+
+if [[ -z $1 ]]; then
+  echo "Usage: omadeb-install-font <font>" >&2
+  exit 1
+fi
+
+mkdir -p ~/.local/share/fonts
+
+case "$1" in
+jetbrains-mono)
+  omakub-pkg-add fonts-jetbrains-mono
+  ;;
+iafonts)
+  omakub-pkg-add fonts-ia-writer-mono
+  ;;
+cascadia-mono)
+  omakub-pkg-add fonts-cascadia-mono-nf
+  ;;
+mscore)
+  omakub-pkg-add ttf-mscorefonts-installer
+  ;;
+*)
+  echo "Usage: omadeb-install-font <font>" >&2
+  exit 1
+  ;;
+esac
+
+fc-cache

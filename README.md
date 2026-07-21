@@ -1,105 +1,175 @@
-# rw-workstation-bootstrap
+# Fixplizz Workstation
 
-Scaffold for workstation bootstrap assets used by the Omniroute companion setup.
+> One-command workstation bootstrap for Ubuntu 26.04 LTS — development, DevOps, AI, daily tools, and remote work.
 
-## Responsibilities
+[![CI](https://github.com/fixplizz/rw-workstation-bootstrap/actions/workflows/ci.yml/badge.svg)](https://github.com/fixplizz/rw-workstation-bootstrap/actions/workflows/ci.yml)
+[![Latest prerelease](https://img.shields.io/github/v/release/fixplizz/rw-workstation-bootstrap?include_prereleases&sort=semver&label=prerelease)](https://github.com/fixplizz/rw-workstation-bootstrap/releases)
+[![Ubuntu 26.04 LTS](https://img.shields.io/badge/Ubuntu_26.04_LTS-E95420?logo=ubuntu&logoColor=white)](https://releases.ubuntu.com/26.04/)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-- keep workstation bootstrap scripts in one place
-- store repo-local bootstrap placeholders for WSL, Windows, OmniRoute, OpenCode, Codex, and MCP
-- hold template directories that can be filled in by later tasks
-- provide a safe landing zone for rules, skills, agents, and docs
+Fixplizz turns a clean Ubuntu desktop into a consistent workstation for software development, infrastructure work, AI-assisted coding, daily applications, and remote access.
 
-## Companion Repo
+> [!WARNING]
+> **Release Candidate:** `v0.1.0-rc7` adds the Orca desktop agent IDE to the short one-command installer and keeps runtime selection available during installation. Stable `v0.1.0` remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
 
-This repository is meant to work alongside `rw-workstation-secrets`, which holds the companion secret material and operator-specific local state.
-
-`scripts/link-secrets.sh` reads secrets from `RW_SECRETS_DIR` when that variable is set. Otherwise it uses the default companion checkout `../rw-workstation-secrets` next to this repository. The current path contract is documented in `docs/secrets-contract.md`.
-
-By default, `scripts/link-secrets.sh` resolves the active bootstrap checkout from its own location. Set `ROOT_DIR` only if you need to point it at a different bootstrap checkout.
-
-## Main Entry Points
-
-- `scripts/setup-workstation.sh`
-- `scripts/unlock-secrets.sh`
-- `scripts/install-wsl.sh`
-- `scripts/install-windows-tools.sh`
-- `scripts/link-secrets.sh`
-- `scripts/install-omniroute.sh`
-- `scripts/install-opencode.sh`
-- `scripts/install-codex-assets.sh`
-- `scripts/run-opencode.sh`
-- `scripts/smoke-opencode.sh`
-- `scripts/test-omniroute-sandbox.sh`
-- `scripts/setup-workstation.sh --check`
-- `scripts/verify-workstation.sh`
-- `scripts/verify-workstation.sh --scaffold-only`
-- `scripts/verify-workstation.sh --slice omniroute`
-- `scripts/verify-workstation.sh --current`
-- `scripts/verify-workstation.sh` (same as `--current`)
-
-`scripts/verify-workstation.sh` is intentionally scoped to the implemented bootstrap surfaces only. It does not claim full workstation readiness yet.
-The OmniRoute slice verifier treats `OMNIROUTE_HEALTHCHECK_URL` as a path-like override only, so it always probes the local container health endpoint instead of any arbitrary remote URL.
-
-`scripts/setup-workstation.sh` now supports a preflight check: run `bash scripts/setup-workstation.sh --check` to confirm the checkout can be resolved, the expected setup scripts are present and executable, and the basic toolchain is available. The check exercises repo-root resolution and verifies `bash`, `git`, `docker`, `curl`, and `docker compose`. A successful preflight prints `Preflight OK` and exits 0.
-
-That preflight does not verify the secrets checkout contents, the install steps' internal implementation, or a live OmniRoute container. It is a dependency and layout sanity check, not a full workstation validation.
-
-## Verification
-
-After a fresh bootstrap, run the scaffold check to confirm the repository layout and executable script surface:
+## One-command installation
 
 ```bash
-bash scripts/verify-workstation.sh --scaffold-only
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash'
 ```
 
-After machine changes that affect the live OmniRoute install, run the slice check to confirm the linked env file, the running container, and the health endpoint:
+Run this command as your regular desktop user. Fixplizz requests `sudo` only for system operations. You do not need to clone the repository or verify a checksum by hand. The installer uses the `mvp` profile in noninteractive mode by default.
+
+Choose optional runtimes during the same installation:
 
 ```bash
-bash scripts/verify-workstation.sh --slice omniroute
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash -s -- --runtime-menu'
 ```
 
-If you want the currently implemented verification scope in one pass, run:
+For a fully noninteractive selection, pass comma-separated names:
 
 ```bash
-bash scripts/verify-workstation.sh --current
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash -s -- --runtimes bun,deno,java,dotnet'
 ```
 
-`--current` runs the scaffold checks first and then the OmniRoute slice check. It is still a scope-limited verification command, not a claim that the whole workstation is ready.
-Running `bash scripts/verify-workstation.sh` with no arguments is equivalent to `--current`.
-
-Normal setup stays fail-closed on missing prerequisites or unexpected conflicts. The orchestrator now runs the OpenCode and Codex asset installers as part of the normal setup flow.
-
-Use `bash scripts/link-secrets.sh --check` to validate the expected secrets layout and detect target collisions or unsafe symlinked parent paths without writing links.
-
-## Non-Invasive OmniRoute Test
-
-Use the sandbox test when this machine already has a production/local OmniRoute
-container running:
+If installation stops, continue from the last incomplete module:
 
 ```bash
-bash scripts/test-omniroute-sandbox.sh
+fixplizz resume
 ```
 
-The sandbox uses a separate container name, port, generated local env file, and
-Docker volume under `.runtime/`. It does not stop or replace the default
-`rw-omniroute` container and does not use provider API keys.
+## What you get
 
-## Status
+| Area          | Included tools and behavior                                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Core          | Git, curl, wget, jq/yq, ripgrep, fd, bat, fzf, btop, tmux, direnv, Flatpak, ShellCheck, shfmt, SSH client, Wayland clipboard |
+| Desktop       | Guarded GNOME defaults, four workspaces, dock click-to-minimize, `~/Applications`                                            |
+| Terminal      | Alacritty, Starship, zoxide, herdr (`agents`), JetBrains Mono Nerd Font, tmux, fzf, btop                                     |
+| Development   | Node.js LTS, npm/npx, Corepack, pnpm, Yarn, TypeScript, tsx, ESLint, Prettier, Vitest, node-gyp prerequisites, Python, Go, Rust, mise, uv, GitHub CLI, databases |
+| DevOps        | Docker, Compose, kubectl, Helm, k9s, OpenTofu, Ansible, SOPS, age, Trivy, Gitleaks, Hadolint                                 |
+| AI            | Orca desktop agent IDE, OpenAI Codex CLI, OpenCode CLI, and Hermes Agent (`hermes` or `h`)                                 |
+| Daily work    | Obsidian, Zen Browser, LocalSend, LibreOffice, FFmpeg, Poppler                                                               |
+| Remote access | NetBird, RustDesk, Termix                                                                                                    |
 
-The OpenCode and Codex asset install steps are now implemented as idempotent, fail-closed installers. They install curated OpenCode config and agent rules into the user's home directory without touching unrelated existing files unless `RW_CODEX_ASSETS_FORCE=1` is set. Codex-compatible templates are installed under `${CODEX_HOME:-~/.codex}/workstation-bootstrap` by default so an existing global Codex `AGENTS.md` is not overwritten.
+The `mvp` profile runs modules in this order:
 
-Run OpenCode through the bootstrap launcher so provider env files from the
-private secrets repo are loaded without copying keys into public config:
+```text
+core → desktop → terminal → developer → devops-base → ai-base → daily-base → remote-base
+```
+
+## Why Fixplizz
+
+- **One command:** start from a clean supported Ubuntu installation without cloning this repository.
+- **Resumable runs:** retry the failed module with `fixplizz resume` instead of starting over.
+- **Inspectable state:** each run and module writes structured JSON state.
+- **Automatic logs:** bootstrap and module output is available after success or failure.
+- **Repeatable operations:** checks and idempotent apply steps avoid unnecessary work.
+- **Verified sources:** vendor artifacts use pinned versions and SHA256 checksums.
+- **User scope:** Flatpak applications stay in the current user's installation.
+- **Explicit authorization:** AI and remote-access tools wait for you to sign in.
+- **Public/private split:** the public installer never fetches private Fixplizz configuration.
+
+## Requirements
+
+- Ubuntu 26.04 LTS
+- x86_64 / amd64
+- Regular user with `sudo`
+- Internet connection
+- GNOME on Wayland recommended
+
+## Useful commands
 
 ```bash
-bash scripts/run-opencode.sh
+fixplizz status
+fixplizz status --json
+fixplizz doctor
+fixplizz doctor --json
+fixplizz commands
+fixplizz resume
+fixplizz install --profile mvp --dry-run
+fixplizz runtime list
+fixplizz runtime menu
+fixplizz runtime install bun deno
 ```
 
-After configuring OmniRoute providers and a local OmniRoute API key in the
-private secrets repo, run the first end-to-end prompt:
+The base workstation installs Node.js-first development tooling plus Python, Go, and Rust. Additional runtimes are an explicit choice:
 
 ```bash
-bash scripts/smoke-opencode.sh
+fixplizz runtime install bun
+fixplizz runtime install deno java dotnet ruby php elixir zig
 ```
 
-Important: seeing the entry-point scripts here does not mean setup or verification is complete yet. The current scripts are intentionally scope-limited and should not be treated as proof of a finished workstation bootstrap.
+Supported optional names are `bun`, `deno`, `java`, `dotnet`, `ruby`, `php`, `elixir`, and `zig`. Run only the names you actually need. Fixplizz installs them through the already-managed `mise` environment.
+
+## State, logs and recovery
+
+Fixplizz keeps program files, state, configuration, cache, and the CLI in standard user locations:
+
+```text
+~/.local/share/fixplizz
+~/.local/state/fixplizz
+~/.config/fixplizz
+~/.cache/fixplizz
+~/.local/bin/fixplizz
+```
+
+Every installation run has its own state and log files:
+
+```text
+~/.local/state/fixplizz/runs/<run-id>/run.json
+~/.local/state/fixplizz/runs/<run-id>/modules/*.json
+~/.local/state/fixplizz/runs/<run-id>/install.log
+```
+
+On failure, Fixplizz prints the stage or module, exit code, full log path, and the recovery command.
+
+### Technical fallback
+
+If the short endpoint is unavailable, run the immutable RC7 bootstrap from GitHub Raw:
+
+```bash
+bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc7/boot.sh | bash'
+```
+
+## Safety boundaries
+
+Fixplizz does not:
+
+- remove or block Snap;
+- run a distribution upgrade;
+- enable an SSH server;
+- weaken AppArmor;
+- create credentials;
+- sign in to applications on your behalf;
+- fetch a private repository;
+- overwrite unmanaged user files without creating a backup.
+
+## Architecture
+
+Each module follows the same lifecycle:
+
+```text
+plan → check → apply → verify
+```
+
+The runner executes ordered modules, stops on the first failure, writes JSON state and logs, backs up conflicting user files, resumes interrupted runs, and keeps repeated operations idempotent.
+
+Maintainer and architecture documentation:
+
+- [Architecture](docs/architecture.md)
+- [Development](docs/development.md)
+- [Native smoke test](docs/native-smoke-test.md)
+- [Secrets repository boundary](docs/secrets-repository.md)
+- [Upstream attribution](docs/upstream.md)
+
+## Release status
+
+**Current release:** `v0.1.0-rc7`
+
+Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.
+
+See the [current prerelease and release notes](https://github.com/fixplizz/rw-workstation-bootstrap/releases/tag/v0.1.0-rc7). Orca documentation is available at [onorca.dev](https://www.onorca.dev/docs), with source code in the [stablyai/orca repository](https://github.com/stablyai/orca).
+
+## License and attribution
+
+Fixplizz Workstation is available under the [MIT License](LICENSE). See [NOTICE](NOTICE.md), [third-party notices](THIRD_PARTY_NOTICES.md), and [upstream attribution](docs/upstream.md) for retained components and licenses.

@@ -1,0 +1,81 @@
+#!/bin/bash
+# fixplizz:group=install
+# fixplizz:summary=Install a Fixplizz workstation profile
+# fixplizz:args=[--profile NAME] [--runtimes NAME,...|--runtime-menu] [--resume] [--noninteractive] [--dry-run]
+
+set -Eeuo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export FIXPLIZZ_ROOT="$ROOT"
+
+# shellcheck source=install/helpers/fixplizz-env.sh
+source "$ROOT/install/helpers/fixplizz-env.sh"
+# shellcheck source=install/helpers/profile.sh
+source "$ROOT/install/helpers/profile.sh"
+# shellcheck source=install/helpers/runner.sh
+source "$ROOT/install/helpers/runner.sh"
+# shellcheck source=install/helpers/gate.sh
+source "$ROOT/install/helpers/gate.sh"
+
+profile="$FIXPLIZZ_PROFILE"
+resume=false
+dry_run=false
+runtime_menu=false
+runtime_request=''
+
+while (($# > 0)); do
+  case "$1" in
+    --profile)
+      shift
+      profile="${1:-}"
+      ;;
+    --resume) resume=true ;;
+    --runtimes)
+      shift
+      runtime_request="${1:-}"
+      [[ -n $runtime_request ]] || {
+        printf '%s\n' '--runtimes requires a comma-separated value.' >&2
+        exit 2
+      }
+      ;;
+    --runtime-menu) runtime_menu=true ;;
+    --noninteractive) export FIXPLIZZ_NONINTERACTIVE=1 ;;
+    --dry-run)
+      dry_run=true
+      export FIXPLIZZ_DRY_RUN=1
+      ;;
+    *)
+      printf 'Unknown option for fixplizz install: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+if [[ $runtime_menu == true && -n $runtime_request ]]; then
+  printf '%s\n' '--runtimes and --runtime-menu cannot be used together.' >&2
+  exit 2
+fi
+if [[ $runtime_menu == true ]]; then
+  runtime_request="$("$ROOT/bin/fixplizz-runtime" menu --print)"
+elif [[ -n $runtime_request ]]; then
+  runtime_request="$("$ROOT/bin/fixplizz-runtime" validate "$runtime_request")"
+fi
+export FIXPLIZZ_RUNTIMES="$runtime_request"
+
+fixplizz_profile_exists "$profile" || {
+  printf 'Unknown Fixplizz profile: %s\n' "$profile" >&2
+  exit 4
+}
+
+if [[ $dry_run == true ]]; then
+  printf 'Optional runtimes: %s\n' "${FIXPLIZZ_RUNTIMES:-none}"
+  fixplizz_print_plan "$profile"
+  exit 0
+fi
+
+if [[ ${FIXPLIZZ_TEST_MODE:-0} != "1" ]]; then
+  fixplizz_require_supported_environment
+fi
+fixplizz_create_user_dirs
+fixplizz_run_profile "$profile" "$resume"
