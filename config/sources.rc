@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Pinned, official amd64 release sources for v0.1.0-rc6.
+# Pinned, official amd64 release sources for v0.1.0-rc7.
 STARSHIP_VERSION=1.26.0
 STARSHIP_URL=https://github.com/starship/starship/releases/download/v1.26.0/starship-x86_64-unknown-linux-gnu.tar.gz
 STARSHIP_SHA256=321f0dd7af8340a5f2e6a8fec6538a04f617486f9ec70d878f91c09cd8deef22
@@ -89,9 +89,13 @@ HERMES_AGENT_PYTHON_VERSION=3.13
 HERMES_AGENT_URL=https://files.pythonhosted.org/packages/0c/4c/91652c61450763bfe165c65b83026503de0ac9ddad2c11ee522490bf4c2d/hermes_agent-0.18.2-py3-none-any.whl
 HERMES_AGENT_SHA256=8f02155cfc84b28bd98551cd18dffec0efa9ec070dd08f90f1a850f1c779492f
 
+ORCA_VERSION=1.4.148
+ORCA_URL=https://github.com/stablyai/orca/releases/download/v1.4.148/orca-ide_1.4.148_amd64.deb
+ORCA_SHA256=1a2e0defd45584058c394dcea3f709a3953e3bab0530c089ffc25ee3c3c995ac
+
 fixplizz_validate_sources() {
   local prefix url sha url_key sha_key
-  for prefix in STARSHIP ZOXIDE NERD_FONT MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD RUSTDESK TERMIX HERDR HERMES_AGENT; do
+  for prefix in STARSHIP ZOXIDE NERD_FONT MISE UV KUBECTL HELM K9S TOFU SOPS TRIVY GITLEAKS HADOLINT OPENCODE NETBIRD RUSTDESK TERMIX HERDR HERMES_AGENT ORCA; do
     url_key="${prefix}_URL"
     sha_key="${prefix}_SHA256"
     url="${!url_key}"

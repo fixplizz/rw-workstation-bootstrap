@@ -14,7 +14,7 @@ fixplizz_repo_root() {
 
 export FIXPLIZZ_BRAND="${FIXPLIZZ_BRAND:-Fixplizz Workstation}"
 export FIXPLIZZ_REPO="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
-export FIXPLIZZ_REF="${FIXPLIZZ_REF:-v0.1.0-rc6}"
+export FIXPLIZZ_REF="${FIXPLIZZ_REF:-v0.1.0-rc7}"
 export FIXPLIZZ_CHANNEL="${FIXPLIZZ_CHANNEL:-rc}"
 export FIXPLIZZ_PROFILE="${FIXPLIZZ_PROFILE:-mvp}"
 export FIXPLIZZ_NONINTERACTIVE="${FIXPLIZZ_NONINTERACTIVE:-1}"

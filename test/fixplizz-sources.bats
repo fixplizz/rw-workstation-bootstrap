@@ -82,6 +82,13 @@ setup() {
   ! grep -Eqi '(^|[/=-])latest([/._-]|$)|http://' "$ROOT/config/sources.rc"
 }
 
+@test "Orca source is pinned to the official immutable amd64 deb" {
+  source "$ROOT/config/sources.rc"
+  [ "$ORCA_VERSION" = "1.4.148" ]
+  [ "$ORCA_URL" = "https://github.com/stablyai/orca/releases/download/v1.4.148/orca-ide_1.4.148_amd64.deb" ]
+  [ "$ORCA_SHA256" = "1a2e0defd45584058c394dcea3f709a3953e3bab0530c089ffc25ee3c3c995ac" ]
+}
+
 @test "artifact installer rejects a checksum mismatch before installation" {
   fixture="$BATS_TEST_TMPDIR/download"
   printf 'not trusted\n' >"$fixture"
@@ -97,6 +104,43 @@ setup() {
   run env FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" FIXPLIZZ_TEST_MODE=1 bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_binary demo https://example.test/demo '$expected' demo"
   [ "$status" -eq 0 ]
   [ -x "$FIXPLIZZ_BIN_HOME/demo" ]
+}
+
+@test "Deb artifact installer verifies the exact package before apt execution" {
+  fixture="$BATS_TEST_TMPDIR/orca.deb"
+  sudo_log="$BATS_TEST_TMPDIR/sudo.log"
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mkdir -p "$fake_bin"
+  printf 'verified orca deb\n' >"$fixture"
+  expected="$(sha256sum "$fixture" | awk '{print $1}')"
+  cat >"$fake_bin/sudo" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SUDO_LOG"
+SH
+  chmod +x "$fake_bin/sudo"
+
+  run env PATH="$fake_bin:$PATH" SUDO_LOG="$sudo_log" FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_deb_artifact orca https://example.test/orca.deb '$expected'"
+  [ "$status" -eq 0 ]
+  grep -Eq '^apt-get install -y --no-install-recommends /.*fixplizz-orca\..*\.deb$' "$sudo_log"
+  [ -f "$FIXPLIZZ_STATE_HOME/artifacts/orca.sha256" ]
+}
+
+@test "Deb artifact checksum mismatch prevents apt execution" {
+  fixture="$BATS_TEST_TMPDIR/orca.deb"
+  sudo_log="$BATS_TEST_TMPDIR/sudo.log"
+  fake_bin="$BATS_TEST_TMPDIR/fake-bin"
+  mkdir -p "$fake_bin"
+  printf 'untrusted orca deb\n' >"$fixture"
+  cat >"$fake_bin/sudo" <<'SH'
+#!/bin/sh
+printf '%s\n' "$*" >>"$SUDO_LOG"
+SH
+  chmod +x "$fake_bin/sudo"
+
+  run env PATH="$fake_bin:$PATH" SUDO_LOG="$sudo_log" FIXPLIZZ_TEST_DOWNLOAD_FILE="$fixture" bash -c "source '$ROOT/install/helpers/artifacts.sh'; fixplizz_install_deb_artifact orca https://example.test/orca.deb '0000000000000000000000000000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [ ! -e "$sudo_log" ]
+  [ ! -e "$FIXPLIZZ_STATE_HOME/artifacts/orca.sha256" ]
 }
 
 @test "compatible verified artifact is not downloaded or replaced twice" {
@@ -127,7 +171,7 @@ printf '%s\n' "$*" >>"$NPM_LOG"
 SH
   chmod +x "$fake_bin/codex" "$fake_bin/npm"
 
-  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; module_apply_custom"
+  run env PATH="$fake_bin:$PATH" NPM_LOG="$npm_log" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; fixplizz_install_deb_artifact() { :; }; module_apply_custom"
   [ "$status" -eq 0 ]
   [ ! -e "$npm_log" ]
 }
@@ -237,6 +281,17 @@ SH
   run "$ROOT/modules/ai-base.sh" plan
   [ "$status" -eq 0 ]
   [[ "$output" == *"Hermes Agent"* ]]
+}
+
+@test "AI module installs Orca and manages telemetry opt-out" {
+  run "$ROOT/modules/ai-base.sh" plan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Orca"* ]]
+
+  run env HOME="$HOME" bash -c "source '$ROOT/modules/ai-base.sh' plan >/dev/null; npm() { :; }; fixplizz_install_tar_binary() { :; }; fixplizz_install_uv_tool() { :; }; fixplizz_install_deb_artifact() { printf '%s %s %s\n' \"\$1\" \"\$2\" \"\$3\" >'$BATS_TEST_TMPDIR/orca-install.log'; }; module_apply_custom"
+  [ "$status" -eq 0 ]
+  grep -Fq 'orca https://github.com/stablyai/orca/releases/download/v1.4.148/orca-ide_1.4.148_amd64.deb 1a2e0defd45584058c394dcea3f709a3953e3bab0530c089ffc25ee3c3c995ac' "$BATS_TEST_TMPDIR/orca-install.log"
+  [ "$(cat "$HOME/.config/environment.d/90-fixplizz-orca.conf")" = 'ORCA_TELEMETRY_DISABLED=1' ]
 }
 
 @test "MVP modules keep credential and system safety boundaries" {

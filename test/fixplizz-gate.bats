@@ -133,7 +133,7 @@ run_gate() {
   [[ "$output" == *"Stage: bootstrap"* ]]
   [[ "$output" == *"Exit code: 3"* ]]
   [[ "$output" == *"Full log: $bootstrap_log"* ]]
-  [[ "$output" == *"Continue: bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc6/boot.sh | bash'"* ]]
+  [[ "$output" == *"Continue: bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc7/boot.sh | bash'"* ]]
   grep -Fq 'Fixplizz Workstation supports Ubuntu only' "$bootstrap_log"
 }
 

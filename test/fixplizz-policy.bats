@@ -30,7 +30,7 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
 @test "README leads with RC install and blocks stable release" {
   first_command="$(awk '/^```bash$/ {getline; print; exit}' "$ROOT/README.md")"
   [ "$first_command" = "bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://fixplizz.github.io/install | bash'" ]
-  grep -Fq "https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc6/boot.sh" "$ROOT/README.md"
+  grep -Fq "https://raw.githubusercontent.com/fixplizz/rw-workstation-bootstrap/v0.1.0-rc7/boot.sh" "$ROOT/README.md"
   grep -Fq 'Stable v0.1.0 remains blocked until native Ubuntu 26.04 Desktop acceptance passes.' "$ROOT/README.md"
   [ -f "$ROOT/docs/native-smoke-test.md" ]
   [ -f "$ROOT/docs/native-smoke-report-template.md" ]
@@ -70,14 +70,14 @@ setup() { export ROOT="$BATS_TEST_DIRNAME/.."; }
   done
 }
 
-@test "Pages install is the complete RC6 bootstrap without HTML" {
+@test "Pages install is the complete RC7 bootstrap without HTML" {
   [ -f "$ROOT/docs/.nojekyll" ]
   [ -f "$ROOT/docs/index.html" ]
   cmp --silent "$ROOT/boot.sh" "$ROOT/docs/install"
   [ "$(head -n 1 "$ROOT/docs/install")" = '#!/usr/bin/env bash' ]
   ! grep -Eiq '<(!doctype|html|head|body|script)([[:space:]>])' "$ROOT/docs/install"
   grep -Fq "v$(tr -d '[:space:]' <"$ROOT/version")" "$ROOT/docs/install"
-  grep -Fq 'v0.1.0-rc6' "$ROOT/docs/install"
+  grep -Fq 'v0.1.0-rc7' "$ROOT/docs/install"
   bash -n "$ROOT/docs/install"
 }
 
@@ -123,10 +123,10 @@ SH
   [ "$status" -eq 35 ]
 }
 
-@test "RC6 entrypoints and boot checksum manifest are consistent" {
-  grep -Fq 'v0.1.0-rc6' "$ROOT/boot.sh"
-  grep -Fq 'v0.1.0-rc6' "$ROOT/install/helpers/fixplizz-env.sh"
-  [ "$(tr -d '[:space:]' <"$ROOT/version")" = "0.1.0-rc6" ]
+@test "RC7 entrypoints and boot checksum manifest are consistent" {
+  grep -Fq 'v0.1.0-rc7' "$ROOT/boot.sh"
+  grep -Fq 'v0.1.0-rc7' "$ROOT/install/helpers/fixplizz-env.sh"
+  [ "$(tr -d '[:space:]' <"$ROOT/version")" = "0.1.0-rc7" ]
   source "$ROOT/config/release-artifacts.rc"
   [ "$FIXPLIZZ_BOOT_SHA256" = "$(sha256sum "$ROOT/boot.sh" | awk '{print $1}')" ]
 }

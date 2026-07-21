@@ -37,3 +37,13 @@ The installer redistributes no modified herdr source. It downloads the pinned up
 - License: MIT.
 
 Fixplizz does not create Hermes credentials or provider configuration.
+
+## Orca
+
+- Documentation: https://www.onorca.dev/docs
+- Repository: https://github.com/stablyai/orca
+- Installed release: `v1.4.148`, official Ubuntu amd64 Debian package.
+- Role: desktop environment for running and reviewing multiple coding agents in isolated Git worktrees.
+- License: MIT.
+
+Fixplizz downloads the pinned official package and verifies its SHA256 before installation. It disables anonymous Orca telemetry through the user environment and does not create agent credentials.

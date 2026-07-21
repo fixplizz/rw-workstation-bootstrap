@@ -112,6 +112,29 @@ fixplizz_install_uv_tool() {
   fixplizz_write_simple_marker "$name" "$sha"
 }
 
+fixplizz_install_deb_artifact() {
+  local name="$1" url="$2" sha="$3"
+  local package
+  [[ $url == https://* ]] || return 1
+  fixplizz_simple_marker_matches "$name" "$sha" && return 0
+  package="$(mktemp "${TMPDIR:-/tmp}/fixplizz-${name}.XXXXXX.deb")"
+  if [[ -n ${FIXPLIZZ_TEST_DOWNLOAD_FILE:-} ]]; then
+    cp -- "$FIXPLIZZ_TEST_DOWNLOAD_FILE" "$package"
+  else
+    curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$package" "$url"
+  fi
+  if ! fixplizz_verify_sha256 "$package" "$sha"; then
+    rm -f "$package"
+    return 1
+  fi
+  if ! sudo apt-get install -y --no-install-recommends "$package"; then
+    rm -f "$package"
+    return 1
+  fi
+  fixplizz_write_simple_marker "$name" "$sha"
+  rm -f "$package"
+}
+
 fixplizz_install_tar_binary() {
   local name="$1" url="$2" sha="$3" member="$4" binary_name="$5"
   local archive extract_dir destination
