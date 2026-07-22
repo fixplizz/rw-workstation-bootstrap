@@ -23,7 +23,7 @@ json_query() {
 @test "fixplizz version renders version" {
   run "$CLI" version
   [ "$status" -eq 0 ]
-  [ "$output" = "Fixplizz Workstation 0.1.0-rc8" ]
+  [ "$output" = "Fixplizz Workstation 0.1.0-rc9" ]
 }
 
 @test "fixplizz commands lists PR1 commands" {

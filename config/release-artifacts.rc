@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 # SHA256 of boot.sh in this immutable release tag.
-FIXPLIZZ_BOOT_SHA256=9d000205a33d05c7dd4f073c7b58ccf104000f7c3a5c280dee9075039cb41ecc
+FIXPLIZZ_BOOT_SHA256=63f437187ebfe9ae3a97ecd8b00a1957a7758ce22542e2710c0d64e6b6a22e0e

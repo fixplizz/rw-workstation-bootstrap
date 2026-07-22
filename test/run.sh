@@ -7,6 +7,10 @@ cd "$ROOT"
 
 export PATH="$ROOT/bin:/c/Users/User/AppData/Local/hermes/node:$PATH"
 
+if [[ $(python3 -c 'print("fixplizz-python3-ok")' 2>/dev/null || true) != fixplizz-python3-ok ]]; then
+  export FIXPLIZZ_PYTHON=python
+fi
+
 if command -v cygpath >/dev/null 2>&1 && [[ -n ${LOCALAPPDATA:-} ]]; then
   winget_packages="$(cygpath "$LOCALAPPDATA/Microsoft/WinGet/Packages")"
   if [[ -d "$winget_packages" ]]; then

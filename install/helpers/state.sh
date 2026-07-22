@@ -9,7 +9,7 @@ fixplizz_new_run_id() {
 fixplizz_json_write() {
   local path="$1"
   shift
-  python - "$path" "$@" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$path" "$@" <<'PY'
 import json, os, pathlib, sys, tempfile
 path = pathlib.Path(sys.argv[1])
 data = {}
@@ -57,7 +57,7 @@ fixplizz_create_run() {
 fixplizz_read_run_runtimes() {
   local path="$FIXPLIZZ_STATE_HOME/runs/$1/run.json"
   [[ -r $path ]] || return 1
-  python - "$path" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$path" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8")).get("optional_runtimes", ""))
 PY
@@ -89,7 +89,7 @@ fixplizz_read_module_status() {
   local path
   path="$(fixplizz_module_state_path "$1" "$2")"
   [[ -r $path ]] || return 1
-  python - "$path" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$path" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])
 PY
@@ -98,7 +98,7 @@ PY
 fixplizz_finish_run() {
   local run_id="$1" status="$2"
   local path="$FIXPLIZZ_STATE_HOME/runs/$run_id/run.json"
-  python - "$path" "$status" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$path" "$status" <<'PY'
 import json, os, pathlib, sys, tempfile
 path = pathlib.Path(sys.argv[1])
 data = json.loads(path.read_text(encoding="utf-8"))

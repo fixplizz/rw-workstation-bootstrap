@@ -33,7 +33,7 @@ fixplizz_profile_exists "$profile" || {
 }
 mapfile -t modules < <(fixplizz_profile_modules "$profile")
 if [[ $json == true ]]; then
-  python - "$profile" "${modules[@]}" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$profile" "${modules[@]}" <<'PY'
 import json, sys
 print(json.dumps({"ok": True, "command": "module list", "profile": sys.argv[1], "modules": sys.argv[2:]}, separators=(",", ":")))
 PY

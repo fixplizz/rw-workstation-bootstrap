@@ -57,7 +57,7 @@ fi
 installation_state="not-installed"
 if [[ $last_run != none && -d "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules" ]]; then
   installation_state="incomplete"
-  if python - "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules" <<'PY'; then
+  if "${FIXPLIZZ_PYTHON:-python3}" - "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules" <<'PY'; then
 import json, pathlib, sys
 files = sorted(pathlib.Path(sys.argv[1]).glob("*.json"))
 raise SystemExit(0 if len(files) == 8 and all(json.loads(p.read_text())["status"] == "completed" for p in files) else 1)
@@ -67,7 +67,7 @@ PY
 fi
 
 if [[ $json == true ]]; then
-  python - "$version" "$release_stage" "$FIXPLIZZ_CHANNEL" "$FIXPLIZZ_ROOT" "$os_id" "$os_version" "$arch" "$desktop" "$session" "$installation_state" "$legacy" "$last_run" "$FIXPLIZZ_STATE_HOME" <<'PY'
+  "${FIXPLIZZ_PYTHON:-python3}" - "$version" "$release_stage" "$FIXPLIZZ_CHANNEL" "$FIXPLIZZ_ROOT" "$os_id" "$os_version" "$arch" "$desktop" "$session" "$installation_state" "$legacy" "$last_run" "$FIXPLIZZ_STATE_HOME" <<'PY'
 import json, pathlib, sys
 (version, stage, channel, root, os_id, os_version, arch, desktop, session,
  installation_state, legacy, run_id, state_home) = sys.argv[1:]
@@ -111,7 +111,7 @@ EOF
 if [[ $last_run != none ]]; then
   for module_file in "$FIXPLIZZ_STATE_HOME/runs/$last_run/modules"/*.json; do
     [[ -f $module_file ]] || continue
-    python - "$module_file" <<'PY'
+    "${FIXPLIZZ_PYTHON:-python3}" - "$module_file" <<'PY'
 import json, pathlib, sys
 d = json.loads(pathlib.Path(sys.argv[1]).read_text())
 print(f"Module {d.get('module', pathlib.Path(sys.argv[1]).stem)}: {d.get('status', 'unknown')}")

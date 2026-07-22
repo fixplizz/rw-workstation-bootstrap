@@ -17,7 +17,7 @@ fixplizz_bootstrap_failure() {
   printf 'Exit code: %s\n' "$status"
   printf 'Full log: %s\n' "$FIXPLIZZ_FULL_LOG"
   printf "Continue: bash -c 'set -o pipefail; curl -fsSL --retry 3 --retry-all-errors https://raw.githubusercontent.com/%s/%s/boot.sh | bash'\n" \
-    "${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}" "${FIXPLIZZ_REF:-v0.1.0-rc8}"
+    "${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}" "${FIXPLIZZ_REF:-v0.1.0-rc9}"
   printf '============================================================\n'
   exit "$status"
 }
@@ -93,7 +93,7 @@ if [[ ${FIXPLIZZ_TEST_MODE:-0} == 1 && -z ${FIXPLIZZ_BOOT_SOURCE:-} ]]; then
 fi
 
 repo="${FIXPLIZZ_REPO:-fixplizz/rw-workstation-bootstrap}"
-ref="${FIXPLIZZ_REF:-v0.1.0-rc8}"
+ref="${FIXPLIZZ_REF:-v0.1.0-rc9}"
 target="${FIXPLIZZ_PATH:-$HOME/.local/share/fixplizz}"
 state_home="${FIXPLIZZ_STATE_HOME:-$HOME/.local/state/fixplizz}"
 bin_home="${FIXPLIZZ_BIN_HOME:-$HOME/.local/bin}"
